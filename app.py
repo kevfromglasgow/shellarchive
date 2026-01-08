@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 1. CSS: THE "MESH" AESTHETIC ---
+# --- 1. CSS: THE "MESH/WIREFRAME" AESTHETIC ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
@@ -34,15 +34,16 @@ st.markdown("""
         box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
     }
 
-    /* FALLBACK BUTTON STYLE */
-    .enter-btn button {
+    /* PRIMARY 'ENTER' BUTTON (Styled to look like a system prompt) */
+    .enter-button button {
         border: 1px solid #00FF00 !important;
         color: #00FF00 !important;
-        margin-top: 20px;
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
     }
-    .enter-btn button:hover {
+    .enter-button button:hover {
         background-color: #00FF00 !important;
         color: black !important;
+        box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
     }
 
     /* STANDARD BUTTONS */
@@ -72,16 +73,16 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. 3D VIEWER COMPONENT (UPDATED LINK METHOD) ---
+# --- 2. 3D VIEWER COMPONENT ---
 def render_interactive_phone(file_path):
     try:
         with open(file_path, "rb") as f:
             b64_model = base64.b64encode(f.read()).decode()
     except FileNotFoundError:
-        st.error(f"Error: Could not find '{file_path}'")
+        st.error(f"Error: Could not find '{file_path}' in the directory.")
         return
 
-    # Coordinates for Apple Logo
+    # User provided coordinates for Apple Logo
     pos = "0.000029793852146581127m 0.01536270079792104m 0.004359653040944322m"
     norm = "2.7602458702456583e-7m 7.175783489991045e-8m 0.9999999999999594m"
 
@@ -92,22 +93,21 @@ def render_interactive_phone(file_path):
         <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
         <style>
             body {{ margin: 0; background-color: black; overflow: hidden; }}
-            model-viewer {{ width: 100vw; height: 75vh; }}
+            model-viewer {{ width: 100vw; height: 70vh; }}
             
-            /* THE HOTSPOT IS NOW A LINK (A TAG) */
+            /* HOTSPOT STYLE */
             .hotspot {{
                 display: block;
-                width: 40px; 
-                height: 40px;
+                width: 35px; 
+                height: 35px;
                 border-radius: 50%;
                 cursor: pointer;
                 background: rgba(255, 255, 255, 0.05);
-                border: 2px solid rgba(255, 255, 255, 0.5); 
+                border: 1px dashed rgba(255, 255, 255, 0.5); 
                 animation: pulse 2s infinite;
-                text-decoration: none;
             }}
             .hotspot:hover {{
-                border-color: #00FF00;
+                border: 1px solid #00FF00;
                 background: rgba(0, 255, 0, 0.2);
             }}
 
@@ -128,31 +128,44 @@ def render_interactive_phone(file_path):
             camera-orbit="0deg 90deg 105%"
             interaction-prompt="none"
         >
-            <a class="hotspot" 
-               slot="hotspot-trigger" 
-               data-position="{pos}" 
-               data-normal="{norm}"
-               href="?launched=true" 
-               target="_top">
-            </a>
+            <button class="hotspot" 
+                    slot="hotspot-trigger" 
+                    data-position="{pos}" 
+                    data-normal="{norm}"
+                    onclick="triggerLaunch()">
+            </button>
         </model-viewer>
+
+        <script>
+            function triggerLaunch() {{
+                // 1. TRY TO RELOAD (Works on Localhost, blocked on some Clouds)
+                try {{
+                    const url = new URL(window.top.location.href);
+                    url.searchParams.set('launched', 'true');
+                    window.top.location.href = url.toString();
+                }} catch(e) {{
+                    // 2. IF BLOCKED, TELL USER TO CLICK BUTTON
+                    console.log("Auto-redirect blocked by browser security.");
+                    alert("ACCESS GRANTED.\\n\\nSecurity Protocol Active: Please click the flashing 'INITIALIZE SYSTEM' button below to proceed.");
+                }}
+            }}
+        </script>
     </body>
     </html>
     """
-    components.html(html_code, height=650)
+    components.html(html_code, height=600)
 
 
-# --- 3. APP LOGIC FLOW ---
+# --- 3. APP LOGIC ---
 
-# Check Query Params
+# Check Query Params & Session State
 query_params = st.query_params
 url_launched = query_params.get("launched") == "true"
 
-# Check Session State
 if 'manual_launch' not in st.session_state:
     st.session_state.manual_launch = False
 
-# Determine Active State
+# We are active if URL says so OR button was clicked
 is_active = url_launched or st.session_state.manual_launch
 
 # === VIEW 1: LANDING PAGE ===
@@ -161,21 +174,24 @@ if not is_active:
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("<div style='text-align: center; font-size: 2.5em; font-weight: bold; border-bottom: 2px solid white; margin-bottom: 10px;'>IPHONE 17 PRO</div>", unsafe_allow_html=True)
-        st.caption("<center>INTERACTIVE MODEL // CLICK THE PULSING LOGO TO UNLOCK</center>", unsafe_allow_html=True)
+        st.caption("<center>INTERACTIVE MODEL // TAP LOGO TO SCAN</center>", unsafe_allow_html=True)
         
         # 3D Model
         render_interactive_phone("iPhone 17 Pro.glb")
         
-        # Fallback Button (ALWAYS have this just in case)
-        st.markdown('<div class="enter-btn">', unsafe_allow_html=True)
-        if st.button("INITIALIZE SYSTEM [MANUAL ENTER]"):
+        # PRIMARY INTERACTION BUTTON
+        # We make this prominent so if the 3D click fails, this is the obvious next step
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div class="enter-button">', unsafe_allow_html=True)
+        if st.button("INITIALIZE SYSTEM [ENTER]"):
             st.session_state.manual_launch = True
+            st.query_params["launched"] = "true"  # Also set the query param
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
 # === VIEW 2: MUSIC APP ===
 else:
-    # Playlist Data
+    # Playback Logic
     playlist = [
         {"title": "NEON HORIZONS", "artist": "SYSTEM_ID_909", "length": "3:42"},
         {"title": "MAINFRAME ACCESS", "artist": "BINARY_SOUL", "length": "2:15"},
@@ -189,7 +205,6 @@ else:
     # Header
     top_c1, top_c2 = st.columns([1, 6])
     with top_c1:
-        # Exit Button: Clear params to return to home
         if st.button("← EXIT"):
             st.session_state.manual_launch = False
             st.query_params.clear() 
@@ -202,7 +217,7 @@ else:
     # Main Grid
     col_left, col_right = st.columns([1, 1], gap="large")
 
-    # Player UI
+    # Player
     with col_left:
         st.markdown('<div class="wireframe-box">', unsafe_allow_html=True)
         st.caption("STATUS: PLAYING_")
@@ -220,6 +235,7 @@ else:
             <div style="width: 8px; background: white; height: 60%; animation: bounce 1.5s infinite;"></div>
             <div style="width: 8px; background: white; height: 30%; animation: bounce 1.1s infinite;"></div>
             <div style="width: 8px; background: white; height: 70%; animation: bounce 0.9s infinite;"></div>
+            <div style="width: 8px; background: white; height: 50%; animation: bounce 1.3s infinite;"></div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -235,7 +251,7 @@ else:
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Queue UI
+    # Queue
     with col_right:
         st.markdown('<div class="wireframe-box">', unsafe_allow_html=True)
         st.markdown("**QUEUE // DATA_STREAM**")
