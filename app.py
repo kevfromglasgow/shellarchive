@@ -8,7 +8,7 @@ import random
 
 # --- CONFIGURATION ---
 # UPDATE THIS TO YOUR ACTUAL DEPLOYED URL
-DEPLOY_URL = "https://shellarchive.streamlit.app/?launched=true"
+DEPLOY_URL = "https://shellarchive.streamlit.app"
 
 st.set_page_config(
     page_title="SYSTEM_DATA // XLS",
