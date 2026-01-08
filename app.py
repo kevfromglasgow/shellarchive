@@ -1,6 +1,8 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import base64
+import requests
+from io import BytesIO
 
 # --- CONFIGURATION ---
 st.set_page_config(
@@ -9,13 +11,13 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 1. CSS: THE "MESH/WIREFRAME" AESTHETIC ---
+# --- GLOBAL STYLES ---
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
 
 .stApp {
-    background-color: #000000;
+    background-color: #000;
     color: #e0e0e0;
     font-family: 'Space Mono', monospace;
 }
@@ -24,39 +26,39 @@ header, footer {visibility: hidden;}
 .block-container {padding-top: 1rem;}
 
 .wireframe-box {
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    background: rgba(10, 10, 10, 0.8);
+    border: 1px solid rgba(255,255,255,0.8);
+    background: rgba(10,10,10,0.8);
     padding: 25px;
-    position: relative;
     margin-bottom: 20px;
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 20px rgba(255,255,255,0.05);
 }
 
 .enter-button button {
     border: 1px solid #00FF00 !important;
     color: #00FF00 !important;
-    box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+    box-shadow: 0 0 10px rgba(0,255,0,0.2);
 }
+
 .enter-button button:hover {
     background-color: #00FF00 !important;
     color: black !important;
-    box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
+    box-shadow: 0 0 20px rgba(0,255,0,0.6);
 }
 
 .stButton > button {
     width: 100%;
-    border: 1px solid #ffffff;
+    border: 1px solid #fff;
     background-color: transparent;
-    color: #ffffff;
-    border-radius: 0px;
+    color: #fff;
     letter-spacing: 2px;
     padding: 15px 0;
     transition: all 0.2s ease;
 }
+
 .stButton > button:hover {
-    background-color: #ffffff;
-    color: #000000;
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+    background-color: #fff;
+    color: #000;
+    box-shadow: 0 0 15px rgba(255,255,255,0.5);
 }
 
 @keyframes bounce {
@@ -66,7 +68,7 @@ header, footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. MESSAGE LISTENER (Streamlit-safe navigation) ---
+# --- STREAMLIT MESSAGE LISTENER ---
 components.html("""
 <script>
 window.addEventListener("message", (event) => {
@@ -79,14 +81,16 @@ window.addEventListener("message", (event) => {
 </script>
 """, height=0)
 
-# --- 3. 3D VIEWER WITH SCAN + BIOMETRIC ---
+# --- AUDIO PROXY ---
+def stream_audio(track_url):
+    response = requests.get(track_url, stream=True)
+    audio_bytes = BytesIO(response.content)
+    st.audio(audio_bytes, format="audio/mp3")
+
+# --- 3D VIEWER WITH SCAN + BIOMETRIC ---
 def render_interactive_phone(file_path):
-    try:
-        with open(file_path, "rb") as f:
-            b64_model = base64.b64encode(f.read()).decode()
-    except FileNotFoundError:
-        st.error(f"Missing file: {file_path}")
-        return
+    with open(file_path, "rb") as f:
+        b64_model = base64.b64encode(f.read()).decode()
 
     pos = "0.000029793852146581127m 0.01536270079792104m 0.004359653040944322m"
     norm = "2.7602458702456583e-7m 7.175783489991045e-8m 0.9999999999999594m"
@@ -99,10 +103,7 @@ def render_interactive_phone(file_path):
 <style>
 body {{ margin: 0; background: black; overflow: hidden; }}
 
-model-viewer {{
-    width: 100vw;
-    height: 70vh;
-}}
+model-viewer {{ width: 100vw; height: 70vh; }}
 
 .hotspot {{
     width: 35px;
@@ -217,18 +218,31 @@ function startScan() {{
 """
     components.html(html, height=600)
 
-# --- 4. APP LOGIC ---
+# --- APP STATE ---
 query_params = st.query_params
 url_launched = query_params.get("launched") == "true"
 
-if 'manual_launch' not in st.session_state:
+if "manual_launch" not in st.session_state:
     st.session_state.manual_launch = False
 
 is_active = url_launched or st.session_state.manual_launch
 
-# === VIEW 1: LANDING PAGE ===
+# --- TRACK MAP ---
+track_map = {
+    0: st.secrets["TRACK1"],
+    1: st.secrets["TRACK2"],
+    2: st.secrets["TRACK3"],
+}
+
+playlist = [
+    {"title": "NEON HORIZONS", "artist": "SYSTEM_ID_909", "length": "3:42"},
+    {"title": "MAINFRAME ACCESS", "artist": "BINARY_SOUL", "length": "2:15"},
+    {"title": "VOLTAGE SPIKE", "artist": "NULL_POINTER", "length": "4:01"},
+]
+
+# === LANDING PAGE ===
 if not is_active:
-    col1, col2, col3 = st.columns([1, 8, 1])
+    col1, col2, col3 = st.columns([1,8,1])
     with col2:
         st.markdown("<div style='text-align:center;font-size:2.5em;font-weight:bold;border-bottom:2px solid white;'>IPHONE 17 PRO</div>", unsafe_allow_html=True)
         st.caption("<center>INTERACTIVE MODEL // TAP LOGO TO SCAN</center>", unsafe_allow_html=True)
@@ -242,18 +256,13 @@ if not is_active:
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-# === VIEW 2: MUSIC INTERFACE ===
+# === MUSIC SYSTEM ===
 else:
-    playlist = [
-        {"title": "NEON HORIZONS", "artist": "SYSTEM_ID_909", "length": "3:42"},
-        {"title": "MAINFRAME ACCESS", "artist": "BINARY_SOUL", "length": "2:15"},
-        {"title": "VOLTAGE SPIKE", "artist": "NULL_POINTER", "length": "4:01"},
-    ]
-
-    if 'track_index' not in st.session_state:
+    if "track_index" not in st.session_state:
         st.session_state.track_index = 0
 
     current = playlist[st.session_state.track_index]
+    current_url = track_map[st.session_state.track_index]
 
     c1, c2 = st.columns([1,6])
     with c1:
@@ -274,6 +283,8 @@ else:
         st.markdown(f"## {current['title']}")
         st.markdown(f"**ARTIST:** {current['artist']}")
 
+        stream_audio(current_url)
+
         st.markdown("""
         <div style="display:flex;gap:6px;height:60px;align-items:flex-end;">
             <div style="width:8px;background:white;height:40%;animation:bounce 1s infinite;"></div>
@@ -291,15 +302,23 @@ else:
         if b3.button("NEXT >>"):
             st.session_state.track_index = (st.session_state.track_index + 1) % len(playlist)
             st.rerun()
+
         st.markdown('</div>', unsafe_allow_html=True)
 
     with right:
         st.markdown('<div class="wireframe-box">', unsafe_allow_html=True)
         st.markdown("**QUEUE // DATA_STREAM**")
         st.markdown("---")
+
         for i, track in enumerate(playlist):
             active = i == st.session_state.track_index
             style = "border:1px solid #fff;background:rgba(255,255,255,0.1);" if active else "border-bottom:1px solid #333;opacity:0.7;"
             prefix = "▶ " if active else f"0{i+1}. "
-            st.markdown(f"<div style='{style}padding:10px;display:flex;justify-content:space-between;'><span>{prefix}{track['title']}</span><span>{track['length']}</span></div>", unsafe_allow_html=True)
+            st.markdown(
+                f"<div style='{style}padding:10px;display:flex;justify-content:space-between;'>"
+                f"<span>{prefix}{track['title']}</span>"
+                f"<span>{track['length']}</span></div>",
+                unsafe_allow_html=True
+            )
+
         st.markdown('</div>', unsafe_allow_html=True)
