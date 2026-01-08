@@ -406,7 +406,7 @@ else:
         c1, c2, c3, c4 = st.columns([0.8, 5, 2.2, 2])
         
         with c1:
-            st.markdown(f"<div class='col-a' style='border:none;'>{i+1:03d}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='col-a'>{i+1:03d}</div>", unsafe_allow_html=True)
         
         with c2:
             if st.button(f"⟩ {track.get('title', 'Unknown')}", key=f"btn_{i}"):
@@ -414,10 +414,10 @@ else:
                 st.rerun()
         
         with c3:
-            st.markdown(f"<div class='col-c' style='border:none;'>{track.get('artist', 'Unknown')}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='col-c'>{track.get('artist', 'Unknown')}</div>", unsafe_allow_html=True)
 
         with c4:
-            st.markdown(f"<div class='col-d {status_class}' style='border:none;'>{status_text}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='col-d {status_class}'>{status_text}</div>", unsafe_allow_html=True)
         
         st.markdown('</div>', unsafe_allow_html=True)
     
