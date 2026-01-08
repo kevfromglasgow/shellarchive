@@ -2,6 +2,8 @@ import streamlit as st
 import streamlit.components.v1 as components
 import base64
 import json
+import requests
+from io import BytesIO
 
 # --- CONFIGURATION ---
 st.set_page_config(
@@ -15,7 +17,6 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
 
-    /* GLOBAL DARK MODE */
     .stApp {
         background-color: #000000;
         color: #e0e0e0;
@@ -25,7 +26,6 @@ st.markdown("""
     header, footer {visibility: hidden;}
     .block-container {padding-top: 1rem;}
 
-    /* WIREFRAME BOXES */
     .wireframe-box {
         border: 1px solid rgba(255, 255, 255, 0.8);
         background: rgba(10, 10, 10, 0.8);
@@ -35,13 +35,10 @@ st.markdown("""
         box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
     }
 
-    /* SCROLLBAR STYLE */
     ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: #000; }
     ::-webkit-scrollbar-thumb { background: #333; border: 1px solid #fff; }
-    ::-webkit-scrollbar-thumb:hover { background: #fff; }
 
-    /* ENTER BUTTON */
     .enter-btn button {
         border: 1px solid #00FF00 !important;
         color: #00FF00 !important;
@@ -52,13 +49,11 @@ st.markdown("""
         color: black !important;
     }
 
-    /* STANDARD BUTTONS */
     .stButton > button {
         width: 100%;
         border: 1px solid #ffffff;
         background-color: transparent;
         color: #ffffff;
-        border-radius: 0px;
         font-family: 'Space Mono', monospace;
         text-transform: uppercase;
         letter-spacing: 2px;
@@ -71,7 +66,6 @@ st.markdown("""
         box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
     }
     
-    /* VISUALIZER ANIMATION */
     @keyframes bounce {
         0%, 100% { transform: scaleY(1); }
         50% { transform: scaleY(0.4); }
@@ -88,7 +82,6 @@ def render_interactive_phone(file_path):
         st.error(f"Error: Could not find '{file_path}'")
         return
 
-    # Coordinates for Apple Logo
     pos = "0.000029793852146581127m 0.01536270079792104m 0.004359653040944322m"
     norm = "2.7602458702456583e-7m 7.175783489991045e-8m 0.9999999999999594m"
 
@@ -136,19 +129,32 @@ def render_interactive_phone(file_path):
     """
     components.html(html_code, height=650)
 
-# --- 3. DATA LOADER (SECURE) ---
+# --- 3. DATA & AUDIO LOADER (SECURE PROXY) ---
+
 @st.cache_data
 def load_secure_playlist():
+    """Loads metadata from secrets"""
     try:
-        # Load the huge JSON string from secrets
         if "PLAYLIST_DATA" in st.secrets:
             return json.loads(st.secrets["PLAYLIST_DATA"])
         else:
-            # Fallback if secret is missing
             return [{"title": "NO DATA", "artist": "CHECK SECRETS.TOML", "url": ""}]
     except Exception as e:
         st.error(f"Data Error: {e}")
         return []
+
+@st.cache_data(show_spinner=False)
+def fetch_audio_bytes(url):
+    """
+    Downloads the audio from Google Drive to the server ONCE.
+    Returns the bytes so Streamlit can serve them directly.
+    """
+    try:
+        response = requests.get(url, stream=True)
+        response.raise_for_status() # Check for errors (404, etc)
+        return response.content
+    except Exception as e:
+        return None
 
 # --- 4. APP LOGIC ---
 query_params = st.query_params
@@ -167,10 +173,8 @@ if not is_active:
         st.markdown("<div style='text-align: center; font-size: 2.5em; font-weight: bold; border-bottom: 2px solid white; margin-bottom: 10px;'>IPHONE 17 PRO</div>", unsafe_allow_html=True)
         st.caption("<center>INTERACTIVE MODEL // CLICK THE PULSING LOGO TO UNLOCK</center>", unsafe_allow_html=True)
         
-        # Ensure 'iPhone 17 Pro.glb' is in the root directory
         render_interactive_phone("iPhone 17 Pro.glb")
         
-        # Fallback button for mobile users
         st.markdown('<div class="enter-btn">', unsafe_allow_html=True)
         if st.button("INITIALIZE SYSTEM [MANUAL ENTER]"):
             st.session_state.manual_launch = True
@@ -179,11 +183,9 @@ if not is_active:
 
 # === VIEW 2: MUSIC APP ===
 else:
-    # State Management
     if 'track_index' not in st.session_state:
         st.session_state.track_index = 0
     
-    # Safety check if playlist size changes
     if st.session_state.track_index >= len(playlist):
         st.session_state.track_index = 0
         
@@ -213,19 +215,21 @@ else:
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Audio Player
+        # --- PROXY AUDIO PLAYER ---
         if current.get('url'):
-            # 1. autoplay=True forces it to start immediately
-            # 2. We allow the native player to be visible for volume control/scrubbing
-            st.audio(current['url'], format="audio/mp3", autoplay=True)
+            # 1. Fetch bytes from Google (Cached)
+            audio_data = fetch_audio_bytes(current['url'])
             
-            # DEBUG: Uncomment the line below if it STILL doesn't play. 
-            # It will show the raw link so you can click it and see if Google is blocking access.
-            # st.markdown(f"[Test Link]({current['url']})") 
+            if audio_data:
+                # 2. Serve bytes directly (No URL exposed)
+                st.audio(BytesIO(audio_data), format="audio/mp3", autoplay=True)
+            else:
+                st.error("CONNECTION_ERROR: UNABLE TO STREAM ASSET")
         else:
             st.warning("AUDIO_SOURCE_OFFLINE")
+        # --------------------------
 
-        # CSS Visualizer
+        # Visualizer
         st.markdown("""
         <div style="display: flex; gap: 6px; height: 60px; align-items: flex-end; margin-bottom: 25px; margin-top: 10px;">
             <div style="width: 8px; background: white; height: 40%; animation: bounce 1s infinite;"></div>
@@ -248,7 +252,7 @@ else:
             
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Queue UI (No Length Column)
+    # Queue UI
     with col_right:
         st.markdown('<div class="wireframe-box" style="height: 500px; overflow-y: scroll;">', unsafe_allow_html=True)
         st.markdown("**QUEUE // DATA_STREAM**")
@@ -264,7 +268,6 @@ else:
                 style = "border-bottom:1px solid #333; opacity:0.7;"
                 prefix = f"{i+1:03}. "
 
-            # Display only Title and Artist (if desired) or just Title
             st.markdown(
                 f"<div style='{style}padding:10px;display:flex;justify-content:space-between;'>"
                 f"<span>{prefix}{track.get('title', 'Unknown')}</span>"
