@@ -7,8 +7,7 @@ from io import BytesIO
 
 # --- CONFIGURATION ---
 st.set_page_config(
-    page_title="
-t҉w҉o҉ ҉s҉h҉e҉l҉l҉",
+    page_title="evrybdywrldwde",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
