@@ -8,34 +8,64 @@ import time
 DEPLOY_URL = "https://shellarchive.streamlit.app"
 
 st.set_page_config(
-    page_title="VISICALC - AUDIO EDITION",
+    page_title="SYSTEM_DATA // XLS",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# --- VISICALC-INSPIRED CSS ---
+# --- ENHANCED RETRO TERMINAL CSS ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
-    /* GLOBAL - VisiCalc used white/amber on black */
+    /* GLOBAL RESET */
     .stApp {
         background-color: #000000;
-        color: #FFB000;
-        font-family: 'VT323', monospace;
-        font-size: 18px;
-        line-height: 1.2;
+        color: #00FF00;
+        font-family: 'Share Tech Mono', monospace;
+    }
+    
+    /* SCANLINES EFFECT */
+    .stApp::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            rgba(18, 16, 16, 0) 50%, 
+            rgba(0, 0, 0, 0.25) 50%
+        );
+        background-size: 100% 4px;
+        pointer-events: none;
+        z-index: 9999;
+        animation: scanlines 0.1s linear infinite;
+    }
+    
+    @keyframes scanlines {
+        0% { background-position: 0 0; }
+        100% { background-position: 0 4px; }
+    }
+    
+    /* CRT GLOW */
+    .stApp::after {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(ellipse at center, rgba(0,255,0,0.1) 0%, transparent 70%);
+        pointer-events: none;
+        z-index: 9998;
     }
     
     /* REMOVE PADDING */
-    .block-container { 
-        padding-top: 0.5rem; 
-        padding-bottom: 0.5rem;
-        max-width: 100%;
-    }
+    .block-container { padding-top: 1rem; padding-bottom: 1rem; }
     header, footer { visibility: hidden; }
 
-    /* --- LANDING PAGE --- */
+    /* --- LANDING PAGE ICON --- */
     .file-icon-container {
         position: fixed;
         top: 50vh;
@@ -45,186 +75,205 @@ st.markdown("""
         z-index: 10;
     }
     .file-icon {
-        font-size: 60px;
-        color: #FFB000;
+        font-size: 80px;
+        color: #00FF00;
         text-decoration: none;
-        border: 2px solid #FFB000;
-        padding: 40px 50px;
+        border: 3px solid #00FF00;
+        padding: 50px 60px;
         display: block;
-        transition: all 0.2s;
-        background: #000000;
-        font-family: 'VT323', monospace;
+        transition: all 0.3s;
+        background: rgba(0, 0, 0, 0.9);
+        box-shadow: 
+            0 0 20px rgba(0, 255, 0, 0.3),
+            inset 0 0 20px rgba(0, 255, 0, 0.1);
+        text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
     }
     .file-icon:hover {
-        background: #FFB000;
-        color: #000000;
+        background: rgba(0, 255, 0, 0.1);
+        box-shadow: 
+            0 0 50px rgba(0, 255, 0, 0.8),
+            inset 0 0 30px rgba(0, 255, 0, 0.2);
+        transform: scale(1.05);
     }
     .file-label {
-        margin-top: 15px;
+        margin-top: 20px;
         display: block;
-        letter-spacing: 2px;
-        font-size: 1.1em;
+        letter-spacing: 3px;
+        font-size: 1.3em;
+        text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
     }
 
-    /* --- VISICALC STATUS BAR (Top) --- */
-    .status-bar {
-        background: #000000;
-        border: 1px solid #FFB000;
-        padding: 8px 15px;
-        margin-bottom: 3px;
-        font-family: 'VT323', monospace;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        color: #FFB000;
+    /* --- TERMINAL HEADER --- */
+    .terminal-header {
+        border: 2px solid #00FF00;
+        padding: 15px;
+        margin-bottom: 10px;
+        background: rgba(0, 20, 0, 0.5);
+        box-shadow: 
+            0 0 10px rgba(0, 255, 0, 0.3),
+            inset 0 0 10px rgba(0, 0, 0, 0.5);
+        font-size: 0.9em;
+        text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
     }
     
-    .status-left {
-        display: flex;
-        gap: 30px;
+    .blink {
+        animation: blink 1s step-start infinite;
     }
     
-    .cell-ref {
-        font-weight: bold;
-        color: #FFFFFF;
-    }
-
-    /* --- COMMAND BAR (VisiCalc had a prompt line) --- */
-    .command-bar {
-        background: #000000;
-        border: 1px solid #FFB000;
-        border-top: none;
-        padding: 5px 15px;
-        margin-bottom: 3px;
-        font-family: 'VT323', monospace;
-        color: #FFFFFF;
+    @keyframes blink {
+        50% { opacity: 0; }
     }
 
     /* --- SPREADSHEET GRID --- */
     .sheet-container {
-        border: 1px solid #FFB000;
-        margin-top: 5px;
-        background: #000000;
+        border: 3px double #00FF00;
+        margin-top: 20px;
+        background: rgba(0, 10, 0, 0.3);
+        box-shadow: 
+            0 0 20px rgba(0, 255, 0, 0.2),
+            inset 0 0 20px rgba(0, 0, 0, 0.5);
     }
 
-    /* Column Headers (A, B, C...) */
-    .column-headers {
+    /* Header Row */
+    .sheet-header {
         display: flex;
-        border-bottom: 1px solid #FFB000;
-        background: #000000;
-    }
-    
-    .col-header {
-        text-align: center;
-        padding: 5px;
-        border-right: 1px solid #FFB000;
-        color: #FFB000;
+        border-bottom: 3px double #00FF00;
+        background: rgba(0, 50, 0, 0.4);
+        padding: 12px 0;
         font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        text-shadow: 0 0 8px rgba(0, 255, 0, 0.8);
     }
 
     /* Data Rows */
     .sheet-row {
         display: flex;
-        border-bottom: 1px solid #333333;
-        align-items: stretch;
-        min-height: 28px;
-        background: #000000;
-    }
-    
-    .sheet-row:hover {
-        background: #1a1a00;
-    }
-
-    /* Row number */
-    .row-num {
-        width: 50px;
-        border-right: 1px solid #FFB000;
-        padding: 5px;
-        text-align: right;
-        color: #FFB000;
-        font-weight: bold;
-        display: flex;
+        border-bottom: 1px dashed #004400;
         align-items: center;
-        justify-content: flex-end;
+        transition: all 0.2s;
+        min-height: 40px;
+    }
+    .sheet-row:hover {
+        background: rgba(0, 255, 0, 0.08);
+        box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.1);
     }
 
     /* Columns */
-    .cell {
-        padding: 5px 8px;
-        border-right: 1px solid #333333;
-        display: flex;
-        align-items: center;
-        color: #FFB000;
+    .col-a { 
+        width: 8%; 
+        border-right: 1px solid #003300; 
+        padding: 10px; 
+        text-align: center;
+        font-weight: bold;
+        color: #00AA00;
     }
-    
-    .cell-a { width: 80px; justify-content: center; font-weight: bold; }
-    .cell-b { width: 400px; }
-    .cell-c { width: 250px; }
-    .cell-d { width: 120px; justify-content: center; }
+    .col-b { 
+        width: 47%; 
+        border-right: 1px solid #003300; 
+        padding: 10px;
+        text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+    }
+    .col-c { 
+        width: 30%; 
+        border-right: 1px solid #003300; 
+        padding: 10px;
+        color: #00DD00;
+    }
+    .col-d { 
+        width: 15%; 
+        padding: 10px; 
+        text-align: center;
+        font-weight: bold;
+    }
 
-    /* Button Styling - VisiCalc style */
+    /* Button Styling */
     .stButton > button {
         border: none;
         background: transparent;
-        color: #FFB000;
+        color: #00FF00;
         text-align: left;
         padding: 0;
         margin: 0;
-        font-family: 'VT323', monospace;
-        font-size: 18px;
+        font-family: 'Share Tech Mono', monospace;
+        text-transform: uppercase;
         width: 100%;
         cursor: pointer;
-        transition: color 0.1s;
+        text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        transition: all 0.2s;
     }
     .stButton > button:hover {
         color: #FFFFFF;
-        background: transparent;
+        background: rgba(0, 255, 0, 0.1);
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+        letter-spacing: 1px;
     }
     
-    /* Active/Selected Row */
+    /* Active Row Highlight */
     .active-row {
-        background: #2a2200 !important;
+        background: rgba(0, 255, 0, 0.15) !important;
+        box-shadow: inset 0 0 15px rgba(0, 255, 0, 0.3);
+        border-left: 4px solid #00FF00;
     }
     
-    .active-row .cell {
-        color: #FFFFFF;
+    /* Player Container */
+    .player-container {
+        border: 2px solid #00FF00;
+        padding: 12px;
+        background: rgba(0, 30, 0, 0.5);
+        margin-bottom: 10px;
+        box-shadow: 
+            0 0 15px rgba(0, 255, 0, 0.2),
+            inset 0 0 10px rgba(0, 0, 0, 0.5);
     }
-
+    
     /* Close Button */
-    .close-btn-container {
-        margin-bottom: 5px;
+    .close-btn {
+        background: transparent !important;
+        border: 2px solid #00FF00 !important;
+        color: #00FF00 !important;
+        padding: 8px 20px !important;
+        text-shadow: 0 0 5px rgba(0, 255, 0, 0.5) !important;
+        transition: all 0.3s !important;
+    }
+    .close-btn:hover {
+        background: rgba(0, 255, 0, 0.2) !important;
+        box-shadow: 0 0 20px rgba(0, 255, 0, 0.5) !important;
     }
     
-    /* Player */
-    .player-box {
-        border: 1px solid #FFB000;
-        padding: 8px 15px;
-        margin-bottom: 5px;
-        background: #000000;
-        color: #FFFFFF;
-    }
-    
-    /* Bottom info bar */
-    .bottom-bar {
-        border: 1px solid #FFB000;
-        border-top: none;
-        padding: 5px 15px;
-        margin-top: -1px;
-        background: #000000;
-        color: #FFB000;
-        text-align: center;
-    }
-    
-    /* Hide default streamlit elements */
-    .stButton button:focus {
-        outline: none;
-        box-shadow: none;
-    }
-    
-    /* Audio player styling */
+    /* Audio Player Styling */
     audio {
-        width: 100%;
-        height: 30px;
+        filter: hue-rotate(90deg) brightness(1.2);
+    }
+    
+    /* Glitch Text Effect */
+    .glitch {
+        position: relative;
+        animation: glitch-skew 2s infinite;
+    }
+    
+    @keyframes glitch-skew {
+        0% { transform: skew(0deg); }
+        10% { transform: skew(-2deg); }
+        20% { transform: skew(2deg); }
+        30% { transform: skew(0deg); }
+        100% { transform: skew(0deg); }
+    }
+    
+    /* Status Indicators */
+    .status-ready {
+        color: #00AA00;
+        text-shadow: 0 0 5px rgba(0, 170, 0, 0.5);
+    }
+    .status-playing {
+        color: #00FF00;
+        text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -265,57 +314,49 @@ if 'current_track' not in st.session_state:
     st.session_state.current_track = None
 
 # ==========================================
-# VIEW 1: LANDING PAGE
+# VIEW 1: THE LANDING PAGE
 # ==========================================
 if not is_active:
     st.markdown(f"""
         <div class="file-icon-container">
             <a href="{DEPLOY_URL}/?launched=true" target="_top" class="file-icon">
-                VISICALC
-                <span class="file-label">AUDIO EDITION</span>
+                <div class="glitch">[XLS]</div>
+                <span class="file-label">ACCESS_WORKBOOK.XLS</span>
             </a>
         </div>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# VIEW 2: VISICALC SPREADSHEET
+# VIEW 2: THE INTERACTIVE SPREADSHEET
 # ==========================================
 else:
-    # Get current track info for status bar
-    current_cell = "A1"
-    current_value = ""
-    if st.session_state.current_track:
-        for i, track in enumerate(playlist):
-            if track == st.session_state.current_track:
-                current_cell = f"B{i+1}"
-                current_value = f'"{track["title"]}"'
-                break
-    
-    # --- STATUS BAR (VisiCalc-style) ---
+    # --- Terminal Header ---
     st.markdown(f"""
-    <div class="status-bar">
-        <div class="status-left">
-            <span class="cell-ref">{current_cell}</span>
-            <span>{current_value}</span>
-        </div>
-        <div>MEMORY: {len(playlist)} TRACKS LOADED</div>
+    <div class="terminal-header">
+        <div>SYSTEM: WORKBOOK_INTERFACE v2.1.9</div>
+        <div>SESSION: {time.strftime('%Y-%m-%d %H:%M:%S')} UTC</div>
+        <div>STATUS: <span style="color:#00FF00;">CONNECTED</span> <span class="blink">█</span></div>
+        <div>RECORDS_LOADED: {len(playlist):03d}</div>
     </div>
     """, unsafe_allow_html=True)
     
-    # --- COMMAND BAR ---
-    col1, col2 = st.columns([1, 6])
+    # --- Top Navigation ---
+    col1, col2 = st.columns([1, 5])
+    
     with col1:
-        if st.button("/Q - QUIT", key="close"):
+        if st.button("◄◄ CLOSE_FILE", key="close", help="Exit workbook"):
             st.session_state.manual_launch = False
             st.query_params.clear()
             st.rerun()
-    
+
     with col2:
         if st.session_state.current_track:
             track = st.session_state.current_track
             st.markdown(f"""
-            <div class="player-box">
-                NOW PLAYING: {track['title']} - {track['artist']}
+            <div class="player-container">
+                <div style="color:#00FF00; font-weight:bold; margin-bottom:5px;">
+                    ▶ NOW_PROCESSING: {track['title']} // {track['artist']}
+                </div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -324,60 +365,53 @@ else:
                 if audio_data:
                     st.audio(BytesIO(audio_data), format="audio/mp3", autoplay=True)
                 else:
-                    st.error("ERROR: CONNECTION FAILED")
+                    st.error("⚠ ERR_CONNECTION_REFUSED")
 
-    # --- SPREADSHEET GRID ---
+    # --- Spreadsheet Header ---
     st.markdown("""
     <div class="sheet-container">
-        <!-- Column Headers -->
-        <div class="column-headers">
-            <div class="row-num"></div>
-            <div class="col-header" style="width:80px;">A</div>
-            <div class="col-header" style="width:400px;">B</div>
-            <div class="col-header" style="width:250px;">C</div>
-            <div class="col-header" style="width:120px; border-right:none;">D</div>
+        <div class="sheet-header">
+            <div class="col-a">#ID</div>
+            <div class="col-b">TRACK_TITLE [CLICK_TO_EXECUTE]</div>
+            <div class="col-c">ARTIST_REFERENCE</div>
+            <div class="col-d">STATUS</div>
         </div>
     """, unsafe_allow_html=True)
 
-    # --- Data Rows ---
+    # --- Spreadsheet Rows ---
     for i, track in enumerate(playlist):
         is_playing = (st.session_state.current_track == track)
         row_class = "active-row" if is_playing else ""
-        row_num = i + 1
+        status_class = "status-playing" if is_playing else "status-ready"
+        status_text = "▶ PLAY" if is_playing else "READY"
         
+        # Create row container
         st.markdown(f'<div class="sheet-row {row_class}">', unsafe_allow_html=True)
-        st.markdown(f'<div class="row-num">{row_num}</div>', unsafe_allow_html=True)
         
-        # Create columns for cells
-        c1, c2, c3, c4 = st.columns([80, 400, 250, 120], gap="small")
+        c1, c2, c3, c4 = st.columns([0.8, 4.7, 3, 1.5])
         
-        # CELL A: ID
         with c1:
-            st.markdown(f"<div class='cell cell-a' style='border:none;'>{row_num:03d}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='col-a' style='border:none;'>{i+1:03d}</div>", unsafe_allow_html=True)
         
-        # CELL B: Title (clickable)
         with c2:
-            if st.button(f"{track.get('title', 'UNKNOWN')}", key=f"btn_{i}"):
+            if st.button(f"⟩ {track.get('title', 'Unknown')}", key=f"btn_{i}"):
                 st.session_state.current_track = track
                 st.rerun()
         
-        # CELL C: Artist
         with c3:
-            st.markdown(f"<div class='cell cell-c' style='border:none;'>{track.get('artist', 'UNKNOWN')}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='col-c' style='border:none;'>{track.get('artist', 'Unknown')}</div>", unsafe_allow_html=True)
 
-        # CELL D: Status
         with c4:
-            status = ">" if is_playing else ""
-            st.markdown(f"<div class='cell cell-d' style='border:none;'>{status}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='col-d {status_class}' style='border:none;'>{status_text}</div>", unsafe_allow_html=True)
         
         st.markdown('</div>', unsafe_allow_html=True)
     
     # Close container
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # --- BOTTOM STATUS BAR ---
+    # --- Footer Info ---
     st.markdown(f"""
-    <div class="bottom-bar">
-        /B-BLANK /C-CLEAR /D-DELETE /E-EDIT /F-FORMAT /G-GLOBAL /I-INSERT /M-MOVE /P-PLAY /Q-QUIT /R-REPLICATE /S-STORAGE /T-TITLES /V-VALUE /W-WINDOW
+    <div class="terminal-header" style="margin-top:20px; font-size:0.8em;">
+        <div>END_OF_WORKBOOK // TOTAL_ENTRIES: {len(playlist)} // MEMORY_USAGE: OK</div>
     </div>
     """, unsafe_allow_html=True)
