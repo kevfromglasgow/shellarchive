@@ -24,7 +24,7 @@ st.markdown("""
     }
     
     header, footer {visibility: hidden;}
-    .block-container {padding-top: 1rem;}
+    .block-container {padding-top: 0rem; padding-bottom: 0rem;}
 
     /* WIREFRAME BOXES */
     .wireframe-box {
@@ -40,17 +40,6 @@ st.markdown("""
     ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: #000; }
     ::-webkit-scrollbar-thumb { background: #333; border: 1px solid #fff; }
-
-    /* ENTER BUTTON */
-    .enter-btn button {
-        border: 1px solid #00FF00 !important;
-        color: #00FF00 !important;
-        margin-top: 20px;
-    }
-    .enter-btn button:hover {
-        background-color: #00FF00 !important;
-        color: black !important;
-    }
 
     /* STANDARD BUTTONS */
     .stButton > button {
@@ -77,7 +66,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. 3D VIEWER WITH BIOMETRIC SCAN + AUTO-LINK ---
+# --- 2. 3D VIEWER WITH CENTERED BUTTON (NO HOTSPOT) ---
 def render_interactive_phone(file_path):
     try:
         with open(file_path, "rb") as f:
@@ -86,105 +75,69 @@ def render_interactive_phone(file_path):
         st.error(f"Error: Could not find '{file_path}'")
         return
 
-    pos = "0.000029793852146581127m 0.01536270079792104m 0.004359653040944322m"
-    norm = "2.7602458702456583e-7m 7.175783489991045e-8m 0.9999999999999594m"
-
     html_code = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
         <style>
-            body {{ margin: 0; background: black; overflow: hidden; }}
-            model-viewer {{ width: 100vw; height: 75vh; }}
+            body {{ margin: 0; background: black; overflow: hidden; font-family: 'Courier New', monospace; }}
+            model-viewer {{ width: 100vw; height: 90vh; }} /* Taller for better centering */
             
-            /* HOTSPOT (Starts Scan) */
-            .hotspot {{
-                width: 35px; height: 35px; border-radius: 50%; cursor: pointer;
-                background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.6);
-                animation: pulse 2s infinite;
+            /* CENTERED BUTTON STYLE */
+            #center-btn {{
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                padding: 20px 40px;
+                background: rgba(0, 0, 0, 0.7);
+                border: 2px solid #00ff00;
+                color: #00ff00;
+                font-size: 1.5em;
+                font-weight: bold;
+                letter-spacing: 3px;
+                text-decoration: none;
+                text-transform: uppercase;
+                cursor: pointer;
+                z-index: 999;
+                box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+                transition: all 0.3s;
+                text-align: center;
+                backdrop-filter: blur(5px);
             }}
-            @keyframes pulse {{ 0% {{transform: scale(0.9);}} 50% {{transform: scale(1.1);}} 100% {{transform: scale(0.9);}} }}
-
-            /* SCANNING UI */
-            #scan-line {{
-                position: absolute; top: 0; width: 100%; height: 4px;
-                background: #00ffcc; box-shadow: 0 0 20px #00ffcc;
-                animation: scan 2.5s linear forwards; display: none;
+            #center-btn:hover {{
+                background: #00ff00;
+                color: black;
+                box-shadow: 0 0 40px rgba(0, 255, 0, 0.6);
             }}
-            @keyframes scan {{ from {{top: 0;}} to {{top: 100%;}} }}
-
-            #biometric {{
-                position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-                width: 300px; border: 1px solid #00ffcc; padding: 6px; display: none;
-                font-family: monospace;
-            }}
-            #bar {{ width: 0%; height: 12px; background: #00ffcc; transition: width 0.1s linear; }}
-            #status {{ text-align: center; font-size: 12px; margin-top: 6px; color: #00ffcc; }}
         </style>
     </head>
     <body>
-        <div id="scan-line"></div>
-        <div id="biometric">
-            <div id="bar"></div>
-            <div id="status">SCANNING BIOMETRICS...</div>
-        </div>
+        
+        <a id="center-btn" href="#" target="_top">INITIALIZE SYSTEM</a>
 
         <model-viewer 
             src="data:model/gltf-binary;base64,{b64_model}"
-            camera-controls auto-rotate shadow-intensity="2" exposure="0.6"
-            camera-orbit="0deg 90deg 105%" interaction-prompt="none">
-            
-            <button class="hotspot" slot="hotspot-trigger" 
-                data-position="{pos}" data-normal="{norm}"
-                onclick="startScan()">
-            </button>
-        </model-viewer>
+            camera-controls 
+            auto-rotate 
+            shadow-intensity="2" 
+            exposure="0.6"
+            camera-orbit="0deg 90deg 105%" 
+            interaction-prompt="none">
+            </model-viewer>
 
         <script>
-        function startScan() {{
-            const scan = document.getElementById("scan-line");
-            const bio = document.getElementById("biometric");
-            const bar = document.getElementById("bar");
-            const status = document.getElementById("status");
-
-            // Show UI
-            scan.style.display = "block";
-            bio.style.display = "block";
-
-            let progress = 0;
-            const interval = setInterval(() => {{
-                progress += 2;
-                bar.style.width = progress + "%";
-
-                if (progress >= 100) {{
-                    clearInterval(interval);
-                    status.innerText = "IDENTITY VERIFIED";
-                    
-                    // --- NAVIGATION FIX ---
-                    setTimeout(() => {{
-                        // 1. Get current URL (works on localhost AND cloud)
-                        const currentUrl = new URL(window.top.location.href);
-                        
-                        // 2. Add the trigger param
-                        currentUrl.searchParams.set("launched", "true");
-                        
-                        // 3. Create a hidden link and click it
-                        // This bypasses the "blocked redirect" because it acts like a user click
-                        const link = document.createElement('a');
-                        link.href = currentUrl.toString();
-                        link.target = "_top"; // Breaks out of iframe
-                        document.body.appendChild(link);
-                        link.click(); 
-                    }}, 600);
-                }}
-            }}, 40); // Scan speed
-        }}
+            // Ensure button links correctly on Localhost and Cloud
+            const btn = document.getElementById("center-btn");
+            const currentUrl = new URL(window.top.location.href);
+            currentUrl.searchParams.set("launched", "true");
+            btn.href = currentUrl.toString();
         </script>
     </body>
     </html>
     """
-    components.html(html_code, height=650)
+    components.html(html_code, height=700)
 
 # --- 3. DATA & PROXY LOADER ---
 @st.cache_data
@@ -217,19 +170,9 @@ playlist = load_secure_playlist()
 
 # === VIEW 1: LANDING PAGE ===
 if not is_active:
-    col1, col2, col3 = st.columns([1, 8, 1])
-    with col2:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("<div style='text-align: center; font-size: 2.5em; font-weight: bold; border-bottom: 2px solid white; margin-bottom: 10px;'>IPHONE 17 PRO</div>", unsafe_allow_html=True)
-        st.caption("<center>INTERACTIVE MODEL // CLICK THE PULSING LOGO TO UNLOCK</center>", unsafe_allow_html=True)
-        
-        render_interactive_phone("iPhone 17 Pro.glb")
-        
-        st.markdown('<div class="enter-btn">', unsafe_allow_html=True)
-        if st.button("INITIALIZE SYSTEM [MANUAL ENTER]"):
-            st.session_state.manual_launch = True
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+    # Use full width container for the model
+    # No Text, No Headers. Just the interactive model.
+    render_interactive_phone("iPhone 17 Pro.glb")
 
 # === VIEW 2: MUSIC APP ===
 else:
