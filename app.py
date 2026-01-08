@@ -77,9 +77,6 @@ def render_interactive_phone(file_path):
     pos = "0.000029793852146581127m 0.01536270079792104m 0.004359653040944322m"
     norm = "2.7602458702456583e-7m 7.175783489991045e-8m 0.9999999999999594m"
     
-    # Target URL for the "Enter" button
-    target_url = "https://shellarchive.streamlit.app/?launched=true"
-
     html_code = f"""
     <!DOCTYPE html>
     <html>
@@ -119,25 +116,26 @@ def render_interactive_phone(file_path):
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                padding: 15px 30px;
-                background: rgba(0, 255, 0, 0.1);
-                border: 1px solid #00ff00;
+                padding: 20px 40px;
+                background: rgba(0, 0, 0, 0.8);
+                border: 2px solid #00ff00;
                 color: #00ff00;
-                font-size: 1.2em;
+                font-size: 1.5em;
                 font-weight: bold;
-                letter-spacing: 2px;
+                letter-spacing: 3px;
                 text-decoration: none;
                 text-transform: uppercase;
                 cursor: pointer;
                 display: none; /* HIDDEN BY DEFAULT */
-                z-index: 999;
-                box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+                z-index: 9999; /* Ensure it's on top */
+                box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
                 transition: all 0.3s;
+                text-align: center;
             }}
             #enter-btn:hover {{
                 background: #00ff00;
                 color: black;
-                box-shadow: 0 0 30px rgba(0, 255, 0, 0.6);
+                box-shadow: 0 0 40px rgba(0, 255, 0, 0.8);
             }}
             
         </style>
@@ -150,7 +148,7 @@ def render_interactive_phone(file_path):
             <div id="status">SCANNING BIOMETRICS...</div>
         </div>
         
-        <a id="enter-btn" href="{target_url}" target="_top">INITIALIZE SYSTEM</a>
+        <a id="enter-btn" href="#" target="_top">INITIALIZE SYSTEM</a>
 
         <model-viewer 
             src="data:model/gltf-binary;base64,{b64_model}"
@@ -175,6 +173,12 @@ def render_interactive_phone(file_path):
             scan.style.display = "block";
             bio.style.display = "block";
 
+            // 2. Prepare the link URL dynamically (Fixes the broken button issue)
+            // This ensures it works on localhost AND cloud
+            const currentUrl = new URL(window.top.location.href);
+            currentUrl.searchParams.set("launched", "true");
+            btn.href = currentUrl.toString();
+
             let progress = 0;
             const interval = setInterval(() => {{
                 progress += 2;
@@ -184,18 +188,14 @@ def render_interactive_phone(file_path):
                     clearInterval(interval);
                     status.innerText = "IDENTITY VERIFIED";
                     
-                    // 2. WAIT A MOMENT, THEN SWAP UI
+                    // 3. COMPLETE: HIDE ANIMATION, SHOW BUTTON
                     setTimeout(() => {{
-                        // Hide Scan Animations
                         scan.style.display = "none";
                         bio.style.display = "none";
-                        
-                        // Show Center Button
-                        btn.style.display = "block";
-                        
-                    }}, 600);
+                        btn.style.display = "block"; // Reveal the button
+                    }}, 500);
                 }}
-            }}, 40); // Scan speed
+            }}, 30); // Scan speed
         }}
         </script>
     </body>
