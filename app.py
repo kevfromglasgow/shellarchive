@@ -149,7 +149,7 @@ st.markdown("""
     /* Data Rows */
     .sheet-row {
         display: flex;
-        border-bottom: 1px dashed #004400;
+        border-bottom: 1px solid #00FF00;
         align-items: center;
         transition: all 0.2s;
         min-height: 40px;
@@ -162,29 +162,41 @@ st.markdown("""
     /* Columns */
     .col-a { 
         width: 8%; 
-        border-right: 1px solid #003300; 
+        border-right: 1px solid #00FF00; 
         padding: 10px; 
         text-align: center;
         font-weight: bold;
         color: #00AA00;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .col-b { 
         width: 47%; 
-        border-right: 1px solid #003300; 
+        border-right: 1px solid #00FF00; 
         padding: 10px;
         text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .col-c { 
         width: 30%; 
-        border-right: 1px solid #003300; 
+        border-right: 1px solid #00FF00; 
         padding: 10px;
         color: #00DD00;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .col-d { 
         width: 15%; 
         padding: 10px; 
         text-align: center;
         font-weight: bold;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     /* Button Styling */
@@ -201,6 +213,9 @@ st.markdown("""
         cursor: pointer;
         text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
         transition: all 0.2s;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .stButton > button:hover {
         color: #FFFFFF;
