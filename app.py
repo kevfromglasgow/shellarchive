@@ -21,12 +21,10 @@ st.markdown("""
         font-family: 'Space Mono', monospace;
     }
     
-    /* HIDE DEFAULT STREAMLIT ELEMENTS */
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
+    header, footer {visibility: hidden;}
     .block-container {padding-top: 1rem;}
 
-    /* WIREFRAME BOXES (The "Mesh" Look) */
+    /* WIREFRAME BOXES */
     .wireframe-box {
         border: 1px solid rgba(255, 255, 255, 0.8);
         background: rgba(10, 10, 10, 0.8);
@@ -36,7 +34,19 @@ st.markdown("""
         box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
     }
 
-    /* CUSTOM BUTTONS */
+    /* PRIMARY 'ENTER' BUTTON (Styled to look like a system prompt) */
+    .enter-button button {
+        border: 1px solid #00FF00 !important;
+        color: #00FF00 !important;
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+    }
+    .enter-button button:hover {
+        background-color: #00FF00 !important;
+        color: black !important;
+        box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
+    }
+
+    /* STANDARD BUTTONS */
     .stButton > button {
         width: 100%;
         border: 1px solid #ffffff;
@@ -53,7 +63,6 @@ st.markdown("""
         background-color: #ffffff;
         color: #000000;
         box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-        border-color: #ffffff;
     }
     
     /* ANIMATIONS */
@@ -66,10 +75,6 @@ st.markdown("""
 
 # --- 2. 3D VIEWER COMPONENT ---
 def render_interactive_phone(file_path):
-    """
-    Renders the GLB. When the specific hotspot is clicked, 
-    JavaScript reloads the page with '?launched=true'.
-    """
     try:
         with open(file_path, "rb") as f:
             b64_model = base64.b64encode(f.read()).decode()
@@ -77,7 +82,7 @@ def render_interactive_phone(file_path):
         st.error(f"Error: Could not find '{file_path}' in the directory.")
         return
 
-    # Specific coordinates for the Apple Logo on iPhone 17 Pro
+    # User provided coordinates for Apple Logo
     pos = "0.000029793852146581127m 0.01536270079792104m 0.004359653040944322m"
     norm = "2.7602458702456583e-7m 7.175783489991045e-8m 0.9999999999999594m"
 
@@ -88,9 +93,9 @@ def render_interactive_phone(file_path):
         <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
         <style>
             body {{ margin: 0; background-color: black; overflow: hidden; }}
-            model-viewer {{ width: 100vw; height: 75vh; }}
+            model-viewer {{ width: 100vw; height: 70vh; }}
             
-            /* THE INVISIBLE TRIGGER OVER THE LOGO */
+            /* HOTSPOT STYLE */
             .hotspot {{
                 display: block;
                 width: 35px; 
@@ -98,13 +103,12 @@ def render_interactive_phone(file_path):
                 border-radius: 50%;
                 cursor: pointer;
                 background: rgba(255, 255, 255, 0.05);
-                border: 1px dashed rgba(255, 255, 255, 0.3); 
+                border: 1px dashed rgba(255, 255, 255, 0.5); 
                 animation: pulse 2s infinite;
             }}
-            
             .hotspot:hover {{
-                border: 1px solid #fff;
-                background: rgba(255, 255, 255, 0.3);
+                border: 1px solid #00FF00;
+                background: rgba(0, 255, 0, 0.2);
             }}
 
             @keyframes pulse {{
@@ -134,90 +138,85 @@ def render_interactive_phone(file_path):
 
         <script>
             function triggerLaunch() {{
-                // Visual feedback
-                alert("ACCESS GRANTED... LOADING SYSTEM.");
-                
-                // Navigate to launched state
+                // 1. TRY TO RELOAD (Works on Localhost, blocked on some Clouds)
                 try {{
                     const url = new URL(window.top.location.href);
                     url.searchParams.set('launched', 'true');
                     window.top.location.href = url.toString();
                 }} catch(e) {{
-                    // Fallback for strict iframes
-                    console.error(e);
+                    // 2. IF BLOCKED, TELL USER TO CLICK BUTTON
+                    console.log("Auto-redirect blocked by browser security.");
+                    alert("ACCESS GRANTED.\\n\\nSecurity Protocol Active: Please click the flashing 'INITIALIZE SYSTEM' button below to proceed.");
                 }}
             }}
         </script>
     </body>
     </html>
     """
-    components.html(html_code, height=650)
+    components.html(html_code, height=600)
 
 
-# --- 3. APP LOGIC FLOW ---
+# --- 3. APP LOGIC ---
 
-# Check Query Parameters & Session State
+# Check Query Params & Session State
 query_params = st.query_params
 url_launched = query_params.get("launched") == "true"
 
 if 'manual_launch' not in st.session_state:
     st.session_state.manual_launch = False
 
-# Determine if we are in the "Active" state
+# We are active if URL says so OR button was clicked
 is_active = url_launched or st.session_state.manual_launch
 
-# --- VIEW A: THE 3D LANDING PAGE ---
+# === VIEW 1: LANDING PAGE ===
 if not is_active:
     col1, col2, col3 = st.columns([1, 8, 1])
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("<div style='text-align: center; font-size: 2.5em; font-weight: bold; border-bottom: 2px solid white; margin-bottom: 10px;'>IPHONE 17 PRO</div>", unsafe_allow_html=True)
-        st.caption("<center>INTERACTIVE MODEL // CLICK THE PULSING LOGO TO UNLOCK</center>", unsafe_allow_html=True)
+        st.caption("<center>INTERACTIVE MODEL // TAP LOGO TO SCAN</center>", unsafe_allow_html=True)
         
-        # RENDER THE PHONE
-        # Ensure 'iPhone 17 Pro.glb' is in the root directory
+        # 3D Model
         render_interactive_phone("iPhone 17 Pro.glb")
         
-        # Fallback Button (Crucial for Mobile/Strict Browsers)
+        # PRIMARY INTERACTION BUTTON
+        # We make this prominent so if the 3D click fails, this is the obvious next step
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("ENTER SYSTEM [MANUAL OVERRIDE]"):
+        st.markdown('<div class="enter-button">', unsafe_allow_html=True)
+        if st.button("INITIALIZE SYSTEM [ENTER]"):
             st.session_state.manual_launch = True
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-# --- VIEW B: THE MUSIC APP (FUNCTIONAL) ---
+# === VIEW 2: MUSIC APP ===
 else:
-    # 1. SETUP PLAYLIST & STATE
-    # Note: For audio to play, place actual .mp3 files in your folder and update filenames below.
-    # If files are missing, the UI will still work, but no sound will play.
+    # Playback Logic
     playlist = [
-        {"title": "NEON HORIZONS", "artist": "SYSTEM_ID_909", "file": "song1.mp3", "length": "3:42"},
-        {"title": "MAINFRAME ACCESS", "artist": "BINARY_SOUL", "file": "song2.mp3", "length": "2:15"},
-        {"title": "VOLTAGE SPIKE", "artist": "NULL_POINTER", "file": "song3.mp3", "length": "4:01"},
-        {"title": "ZERO DAY", "artist": "KERNEL_PANIC", "file": "song4.mp3", "length": "3:10"},
+        {"title": "NEON HORIZONS", "artist": "SYSTEM_ID_909", "length": "3:42"},
+        {"title": "MAINFRAME ACCESS", "artist": "BINARY_SOUL", "length": "2:15"},
+        {"title": "VOLTAGE SPIKE", "artist": "NULL_POINTER", "length": "4:01"},
     ]
 
     if 'track_index' not in st.session_state:
         st.session_state.track_index = 0
-    
     current_track = playlist[st.session_state.track_index]
 
-    # 2. HEADER
+    # Header
     top_c1, top_c2 = st.columns([1, 6])
     with top_c1:
         if st.button("← EXIT"):
             st.session_state.manual_launch = False
-            st.query_params.clear() # Clears ?launched=true
+            st.query_params.clear() 
             st.rerun()
-            
     with top_c2:
-        st.markdown("### // AUDIO_INTERFACE_V1")
+        st.markdown("### // SYSTEM_AUDIO_INTERFACE")
 
     st.divider()
 
-    # 3. MAIN CONTENT GRID
+    # Main Grid
     col_left, col_right = st.columns([1, 1], gap="large")
 
-    # LEFT: Now Playing & Controls
+    # Player
     with col_left:
         st.markdown('<div class="wireframe-box">', unsafe_allow_html=True)
         st.caption("STATUS: PLAYING_")
@@ -226,13 +225,7 @@ else:
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Try to play audio (will fail gracefully if file missing)
-        try:
-            st.audio(current_track['file'], format='audio/mp3')
-        except:
-            pass # Suppress error if files don't exist yet
-
-        # CSS Visualizer
+        # Visualizer
         st.markdown("""
         <div style="display: flex; gap: 6px; height: 60px; align-items: flex-end; margin-bottom: 25px; margin-top: 10px;">
             <div style="width: 8px; background: white; height: 40%; animation: bounce 1s infinite;"></div>
@@ -247,40 +240,27 @@ else:
 
         # Controls
         b1, b2, b3 = st.columns(3)
-        
         if b1.button("<< PREV"):
             st.session_state.track_index = (st.session_state.track_index - 1) % len(playlist)
             st.rerun()
-            
         if b2.button("|| PAUSE"):
             st.toast("PLAYBACK PAUSED")
-            
         if b3.button("NEXT >>"):
             st.session_state.track_index = (st.session_state.track_index + 1) % len(playlist)
             st.rerun()
-            
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # RIGHT: Playlist Queue
+    # Queue
     with col_right:
         st.markdown('<div class="wireframe-box">', unsafe_allow_html=True)
         st.markdown("**QUEUE // DATA_STREAM**")
         st.markdown("---")
-        
         for i, track in enumerate(playlist):
-            # Styling for active vs inactive tracks
             if i == st.session_state.track_index:
                 style = "border: 1px solid #fff; padding: 10px; background: rgba(255,255,255,0.1); font-weight: bold;"
                 prefix = "▶ "
             else:
                 style = "border-bottom: 1px solid #333; padding: 10px; opacity: 0.7;"
                 prefix = f"0{i+1}. "
-            
-            st.markdown(f"""
-            <div style="{style} display: flex; justify-content: space-between; margin-bottom: 5px;">
-                <span>{prefix}{track['title']}</span>
-                <span>{track['length']}</span>
-            </div>
-            """, unsafe_allow_html=True)
-            
+            st.markdown(f"<div style='{style} display: flex; justify-content: space-between; margin-bottom: 5px;'><span>{prefix}{track['title']}</span><span>{track['length']}</span></div>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
