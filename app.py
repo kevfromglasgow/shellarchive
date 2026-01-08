@@ -36,9 +36,21 @@ st.markdown("""
         box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
     }
 
+    /* SCROLLBAR */
     ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: #000; }
     ::-webkit-scrollbar-thumb { background: #333; border: 1px solid #fff; }
+
+    /* ENTER BUTTON */
+    .enter-btn button {
+        border: 1px solid #00FF00 !important;
+        color: #00FF00 !important;
+        margin-top: 20px;
+    }
+    .enter-btn button:hover {
+        background-color: #00FF00 !important;
+        color: black !important;
+    }
 
     /* STANDARD BUTTONS */
     .stButton > button {
@@ -65,7 +77,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. 3D VIEWER WITH BIOMETRIC SCAN + POPUP BUTTON ---
+# --- 2. 3D VIEWER WITH BIOMETRIC SCAN + AUTO-LINK ---
 def render_interactive_phone(file_path):
     try:
         with open(file_path, "rb") as f:
@@ -76,15 +88,15 @@ def render_interactive_phone(file_path):
 
     pos = "0.000029793852146581127m 0.01536270079792104m 0.004359653040944322m"
     norm = "2.7602458702456583e-7m 7.175783489991045e-8m 0.9999999999999594m"
-    
+
     html_code = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
         <style>
-            body {{ margin: 0; background: black; overflow: hidden; font-family: monospace; }}
-            model-viewer {{ width: 100vw; height: 80vh; }}
+            body {{ margin: 0; background: black; overflow: hidden; }}
+            model-viewer {{ width: 100vw; height: 75vh; }}
             
             /* HOTSPOT (Starts Scan) */
             .hotspot {{
@@ -98,57 +110,25 @@ def render_interactive_phone(file_path):
             #scan-line {{
                 position: absolute; top: 0; width: 100%; height: 4px;
                 background: #00ffcc; box-shadow: 0 0 20px #00ffcc;
-                animation: scan 2.5s linear forwards; display: none; pointer-events: none;
+                animation: scan 2.5s linear forwards; display: none;
             }}
             @keyframes scan {{ from {{top: 0;}} to {{top: 100%;}} }}
 
             #biometric {{
                 position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
                 width: 300px; border: 1px solid #00ffcc; padding: 6px; display: none;
-                background: rgba(0,0,0,0.8);
+                font-family: monospace;
             }}
             #bar {{ width: 0%; height: 12px; background: #00ffcc; transition: width 0.1s linear; }}
             #status {{ text-align: center; font-size: 12px; margin-top: 6px; color: #00ffcc; }}
-            
-            /* THE CENTERED ENTER BUTTON (Hidden initially) */
-            #enter-btn {{
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                padding: 20px 40px;
-                background: rgba(0, 0, 0, 0.8);
-                border: 2px solid #00ff00;
-                color: #00ff00;
-                font-size: 1.5em;
-                font-weight: bold;
-                letter-spacing: 3px;
-                text-decoration: none;
-                text-transform: uppercase;
-                cursor: pointer;
-                display: none; /* HIDDEN BY DEFAULT */
-                z-index: 9999; /* Ensure it's on top */
-                box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
-                transition: all 0.3s;
-                text-align: center;
-            }}
-            #enter-btn:hover {{
-                background: #00ff00;
-                color: black;
-                box-shadow: 0 0 40px rgba(0, 255, 0, 0.8);
-            }}
-            
         </style>
     </head>
     <body>
         <div id="scan-line"></div>
-        
         <div id="biometric">
             <div id="bar"></div>
             <div id="status">SCANNING BIOMETRICS...</div>
         </div>
-        
-        <a id="enter-btn" href="#" target="_top">INITIALIZE SYSTEM</a>
 
         <model-viewer 
             src="data:model/gltf-binary;base64,{b64_model}"
@@ -167,17 +147,10 @@ def render_interactive_phone(file_path):
             const bio = document.getElementById("biometric");
             const bar = document.getElementById("bar");
             const status = document.getElementById("status");
-            const btn = document.getElementById("enter-btn");
 
-            // 1. Show Scan UI
+            // Show UI
             scan.style.display = "block";
             bio.style.display = "block";
-
-            // 2. Prepare the link URL dynamically (Fixes the broken button issue)
-            // This ensures it works on localhost AND cloud
-            const currentUrl = new URL(window.top.location.href);
-            currentUrl.searchParams.set("launched", "true");
-            btn.href = currentUrl.toString();
 
             let progress = 0;
             const interval = setInterval(() => {{
@@ -188,14 +161,24 @@ def render_interactive_phone(file_path):
                     clearInterval(interval);
                     status.innerText = "IDENTITY VERIFIED";
                     
-                    // 3. COMPLETE: HIDE ANIMATION, SHOW BUTTON
+                    // --- NAVIGATION FIX ---
                     setTimeout(() => {{
-                        scan.style.display = "none";
-                        bio.style.display = "none";
-                        btn.style.display = "block"; // Reveal the button
-                    }}, 500);
+                        // 1. Get current URL (works on localhost AND cloud)
+                        const currentUrl = new URL(window.top.location.href);
+                        
+                        // 2. Add the trigger param
+                        currentUrl.searchParams.set("launched", "true");
+                        
+                        // 3. Create a hidden link and click it
+                        // This bypasses the "blocked redirect" because it acts like a user click
+                        const link = document.createElement('a');
+                        link.href = currentUrl.toString();
+                        link.target = "_top"; // Breaks out of iframe
+                        document.body.appendChild(link);
+                        link.click(); 
+                    }}, 600);
                 }}
-            }}, 30); // Scan speed
+            }}, 40); // Scan speed
         }}
         </script>
     </body>
@@ -241,6 +224,12 @@ if not is_active:
         st.caption("<center>INTERACTIVE MODEL // CLICK THE PULSING LOGO TO UNLOCK</center>", unsafe_allow_html=True)
         
         render_interactive_phone("iPhone 17 Pro.glb")
+        
+        st.markdown('<div class="enter-btn">', unsafe_allow_html=True)
+        if st.button("INITIALIZE SYSTEM [MANUAL ENTER]"):
+            st.session_state.manual_launch = True
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # === VIEW 2: MUSIC APP ===
 else:
