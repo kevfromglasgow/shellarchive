@@ -13,7 +13,7 @@ DEPLOY_URL = "https://shellarchive.streamlit.app"
 
 # REPLACE THIS WITH YOUR OWN GLB FILE IF YOU HAVE ONE
 # For now, I'm using a placeholder "Sci-Fi Tablet" from a public CDN
-GLB_MODEL_URL = "https://modelviewer.dev/shared-assets/models/Astronaut.glb" 
+GLB_MODEL_URL = "https://github.com/kevfromglasgow/shellarchive/blob/main/iPhone%2017%20Pro.glb" 
 
 st.set_page_config(
     page_title="SYSTEM_DATA // XLS",
