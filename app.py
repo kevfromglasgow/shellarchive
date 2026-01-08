@@ -88,6 +88,7 @@ def render_interactive_phone(file_path):
         st.error(f"Error: Could not find '{file_path}'")
         return
 
+    # Coordinates for Apple Logo
     pos = "0.000029793852146581127m 0.01536270079792104m 0.004359653040944322m"
     norm = "2.7602458702456583e-7m 7.175783489991045e-8m 0.9999999999999594m"
 
@@ -143,7 +144,8 @@ def load_secure_playlist():
         if "PLAYLIST_DATA" in st.secrets:
             return json.loads(st.secrets["PLAYLIST_DATA"])
         else:
-            return [{"title": "DEMO MODE", "artist": "NO_DATA_FOUND", "length": "0:00", "url": ""}]
+            # Fallback if secret is missing
+            return [{"title": "NO DATA", "artist": "CHECK SECRETS.TOML", "url": ""}]
     except Exception as e:
         st.error(f"Data Error: {e}")
         return []
@@ -165,8 +167,10 @@ if not is_active:
         st.markdown("<div style='text-align: center; font-size: 2.5em; font-weight: bold; border-bottom: 2px solid white; margin-bottom: 10px;'>IPHONE 17 PRO</div>", unsafe_allow_html=True)
         st.caption("<center>INTERACTIVE MODEL // CLICK THE PULSING LOGO TO UNLOCK</center>", unsafe_allow_html=True)
         
+        # Ensure 'iPhone 17 Pro.glb' is in the root directory
         render_interactive_phone("iPhone 17 Pro.glb")
         
+        # Fallback button for mobile users
         st.markdown('<div class="enter-btn">', unsafe_allow_html=True)
         if st.button("INITIALIZE SYSTEM [MANUAL ENTER]"):
             st.session_state.manual_launch = True
@@ -179,7 +183,7 @@ else:
     if 'track_index' not in st.session_state:
         st.session_state.track_index = 0
     
-    # Ensure index is safe
+    # Safety check if playlist size changes
     if st.session_state.track_index >= len(playlist):
         st.session_state.track_index = 0
         
@@ -215,7 +219,7 @@ else:
         else:
             st.warning("AUDIO_SOURCE_OFFLINE")
 
-        # Visualizer
+        # CSS Visualizer
         st.markdown("""
         <div style="display: flex; gap: 6px; height: 60px; align-items: flex-end; margin-bottom: 25px; margin-top: 10px;">
             <div style="width: 8px; background: white; height: 40%; animation: bounce 1s infinite;"></div>
@@ -233,4 +237,33 @@ else:
         if b2.button("|| PAUSE"):
             st.toast("PLAYBACK PAUSED")
         if b3.button("NEXT >>"):
-            st.session_state.track_index = (st.session_state.track_index +
+            st.session_state.track_index = (st.session_state.track_index + 1) % len(playlist)
+            st.rerun()
+            
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # Queue UI (No Length Column)
+    with col_right:
+        st.markdown('<div class="wireframe-box" style="height: 500px; overflow-y: scroll;">', unsafe_allow_html=True)
+        st.markdown("**QUEUE // DATA_STREAM**")
+        st.markdown("---")
+        
+        for i, track in enumerate(playlist):
+            active = i == st.session_state.track_index
+            
+            if active:
+                style = "border:1px solid #fff; background:rgba(255,255,255,0.1);"
+                prefix = "▶ "
+            else:
+                style = "border-bottom:1px solid #333; opacity:0.7;"
+                prefix = f"{i+1:03}. "
+
+            # Display only Title and Artist (if desired) or just Title
+            st.markdown(
+                f"<div style='{style}padding:10px;display:flex;justify-content:space-between;'>"
+                f"<span>{prefix}{track.get('title', 'Unknown')}</span>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+
+        st.markdown('</div>', unsafe_allow_html=True)
