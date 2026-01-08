@@ -73,7 +73,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. 3D VIEWER COMPONENT ---
+# --- 2. 3D VIEWER COMPONENT (FIXED NAVIGATION) ---
 def render_interactive_phone(file_path):
     try:
         with open(file_path, "rb") as f:
@@ -84,6 +84,9 @@ def render_interactive_phone(file_path):
 
     pos = "0.000029793852146581127m 0.01536270079792104m 0.004359653040944322m"
     norm = "2.7602458702456583e-7m 7.175783489991045e-8m 0.9999999999999594m"
+
+    # CRITICAL FIX: Use the ABSOLUTE URL so the link escapes the iframe
+    target_url = "https://shellarchive.streamlit.app/?launched=true"
 
     html_code = f"""
     <!DOCTYPE html>
@@ -119,10 +122,12 @@ def render_interactive_phone(file_path):
             src="data:model/gltf-binary;base64,{b64_model}"
             camera-controls auto-rotate shadow-intensity="2" exposure="0.6"
             camera-orbit="0deg 90deg 105%" interaction-prompt="none">
+            
             <a class="hotspot" slot="hotspot-trigger" 
                data-position="{pos}" data-normal="{norm}"
-               href="?launched=true" target="_top">
+               href="{target_url}" target="_top">
             </a>
+            
         </model-viewer>
     </body>
     </html>
@@ -146,14 +151,14 @@ def load_secure_playlist():
 @st.cache_data(show_spinner=False)
 def fetch_audio_bytes(url):
     """
-    Downloads the audio from Google Drive to the server ONCE.
-    Returns the bytes so Streamlit can serve them directly.
+    Downloads audio from Google Drive to server memory.
+    Prevents public exposure of the URL.
     """
     try:
         response = requests.get(url, stream=True)
-        response.raise_for_status() # Check for errors (404, etc)
+        response.raise_for_status()
         return response.content
-    except Exception as e:
+    except Exception:
         return None
 
 # --- 4. APP LOGIC ---
@@ -217,11 +222,10 @@ else:
         
         # --- PROXY AUDIO PLAYER ---
         if current.get('url'):
-            # 1. Fetch bytes from Google (Cached)
             audio_data = fetch_audio_bytes(current['url'])
             
             if audio_data:
-                # 2. Serve bytes directly (No URL exposed)
+                # Autoplay is ON to ensure music starts immediately
                 st.audio(BytesIO(audio_data), format="audio/mp3", autoplay=True)
             else:
                 st.error("CONNECTION_ERROR: UNABLE TO STREAM ASSET")
