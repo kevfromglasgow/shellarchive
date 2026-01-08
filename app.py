@@ -168,6 +168,11 @@ if 'manual_launch' not in st.session_state:
 # We are active if URL says so OR button was clicked
 is_active = url_launched or st.session_state.manual_launch
 
+# DEBUG - Remove this after testing
+st.sidebar.write(f"DEBUG - url_launched: {url_launched}")
+st.sidebar.write(f"DEBUG - manual_launch: {st.session_state.manual_launch}")
+st.sidebar.write(f"DEBUG - is_active: {is_active}")
+
 # === VIEW 1: LANDING PAGE ===
 if not is_active:
     col1, col2, col3 = st.columns([1, 8, 1])
@@ -183,9 +188,9 @@ if not is_active:
         # We make this prominent so if the 3D click fails, this is the obvious next step
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown('<div class="enter-button">', unsafe_allow_html=True)
-        if st.button("INITIALIZE SYSTEM [ENTER]"):
+        if st.button("INITIALIZE SYSTEM [ENTER]", key="launch_button", use_container_width=True):
             st.session_state.manual_launch = True
-            st.query_params["launched"] = "true"  # Also set the query param
+            st.query_params["launched"] = "true"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
