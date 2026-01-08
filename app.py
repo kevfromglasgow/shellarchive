@@ -215,7 +215,13 @@ else:
         
         # Audio Player
         if current.get('url'):
-            st.audio(current['url'], format="audio/mp3")
+            # 1. autoplay=True forces it to start immediately
+            # 2. We allow the native player to be visible for volume control/scrubbing
+            st.audio(current['url'], format="audio/mp3", autoplay=True)
+            
+            # DEBUG: Uncomment the line below if it STILL doesn't play. 
+            # It will show the raw link so you can click it and see if Google is blocking access.
+            # st.markdown(f"[Test Link]({current['url']})") 
         else:
             st.warning("AUDIO_SOURCE_OFFLINE")
 
