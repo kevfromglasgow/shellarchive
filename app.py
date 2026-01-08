@@ -172,7 +172,7 @@ st.markdown("""
         text-overflow: ellipsis;
     }
     .col-b { 
-        width: 47%; 
+        width: 50%; 
         border-right: 1px solid #00FF00; 
         padding: 10px;
         text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
@@ -181,7 +181,7 @@ st.markdown("""
         text-overflow: ellipsis;
     }
     .col-c { 
-        width: 30%; 
+        width: 22%; 
         border-right: 1px solid #00FF00; 
         padding: 10px;
         color: #00DD00;
@@ -190,7 +190,7 @@ st.markdown("""
         text-overflow: ellipsis;
     }
     .col-d { 
-        width: 15%; 
+        width: 20%; 
         padding: 10px; 
         text-align: center;
         font-weight: bold;
@@ -403,7 +403,7 @@ else:
         # Create row container
         st.markdown(f'<div class="sheet-row {row_class}">', unsafe_allow_html=True)
         
-        c1, c2, c3, c4 = st.columns([0.8, 4.7, 3, 1.5])
+        c1, c2, c3, c4 = st.columns([0.8, 5, 2.2, 2])
         
         with c1:
             st.markdown(f"<div class='col-a' style='border:none;'>{i+1:03d}</div>", unsafe_allow_html=True)
