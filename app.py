@@ -1,5 +1,5 @@
 import streamlit as st
-import streamlit.components.v1 as components  # <--- THIS WAS MISSING
+import streamlit.components.v1 as components
 import json
 import requests
 from io import BytesIO
@@ -11,9 +11,8 @@ import random
 # UPDATE THIS TO YOUR ACTUAL URL
 DEPLOY_URL = "https://shellarchive.streamlit.app" 
 
-# REPLACE THIS WITH YOUR OWN GLB FILE IF YOU HAVE ONE
-# For now, I'm using a placeholder "Sci-Fi Tablet" from a public CDN
-GLB_MODEL_URL = "https://raw.githubusercontent.com/kevfromglasgow/shellarchive/main/shell.glb" 
+# CORRECTED RAW LINK (Fixes the loading issue)
+GLB_MODEL_URL = "https://raw.githubusercontent.com/kevfromglasgow/shellarchive/main/shell.glb"
 
 st.set_page_config(
     page_title="SYSTEM_DATA // XLS",
@@ -40,16 +39,6 @@ st.markdown("""
         max-width: 100%; 
     }
     header, footer { visibility: hidden; }
-
-    /* --- 3D CONTAINER (IDLE STATE) --- */
-    .scene-3d {
-        width: 100%;
-        height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background: radial-gradient(circle at center, #001100 0%, #000000 70%);
-    }
 
     /* --- WORKBOOK CONTAINER (ACTIVE STATE) --- */
     .workbook-container {
@@ -240,10 +229,7 @@ if not is_active:
     # 1. We construct the Link URL for Python
     target_link = f"{DEPLOY_URL}/?launched=true"
     
-    # 2. Render the Model Viewer
-    # The user can Rotate/Zoom the model.
-    # Clicking it triggers the link to open the workbook.
-    
+    # 2. Render the Model Viewer with a FULL SCREEN CLICK OVERLAY
     html_code = f"""
     <!DOCTYPE html>
     <html>
@@ -260,14 +246,19 @@ if not is_active:
                 text-align: center; pointer-events: none;
                 text-shadow: 0 0 10px #00FF00;
                 animation: pulse 2s infinite;
+                z-index: 10;
             }}
             @keyframes pulse {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.5; }} }}
 
-            /* HIDDEN LINK OVERLAY */
-            /* We make a transparent link cover the model so clicking ANYWHERE works */
-            #click-trigger {{
-                position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-                z-index: 999; cursor: pointer;
+            /* GIANT INVISIBLE BUTTON */
+            #click-layer {{
+                position: absolute; 
+                top: 0; 
+                left: 0; 
+                width: 100%; 
+                height: 100%;
+                z-index: 999; 
+                cursor: pointer;
             }}
         </style>
     </head>
@@ -276,11 +267,10 @@ if not is_active:
             [ CLICK_TO_ACCESS_DATA ]
         </div>
 
-        <a id="click-trigger" href="{target_link}" target="_top"></a>
+        <a id="click-layer" href="{target_link}" target="_top"></a>
 
         <model-viewer 
             src="{GLB_MODEL_URL}"
-            camera-controls 
             auto-rotate 
             rotation-per-second="10deg"
             shadow-intensity="1" 
