@@ -6,6 +6,10 @@ import requests
 from io import BytesIO
 
 # --- CONFIGURATION ---
+# UPDATE THIS TO YOUR ACTUAL DEPLOYED URL
+# If running locally, you can use "http://localhost:8501"
+DEPLOY_URL = "https://shellarchive.streamlit.app" 
+
 st.set_page_config(
     page_title="evrybdywrldwde",
     layout="wide",
@@ -66,7 +70,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. 3D VIEWER WITH CENTERED BUTTON (NO HOTSPOT) ---
+# --- 2. 3D VIEWER WITH CENTERED BUTTON ---
 def render_interactive_phone(file_path):
     try:
         with open(file_path, "rb") as f:
@@ -75,6 +79,9 @@ def render_interactive_phone(file_path):
         st.error(f"Error: Could not find '{file_path}'")
         return
 
+    # We construct the full link here in Python to avoid JS security blocks
+    full_link = f"{DEPLOY_URL}/?launched=true"
+
     html_code = f"""
     <!DOCTYPE html>
     <html>
@@ -82,7 +89,7 @@ def render_interactive_phone(file_path):
         <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
         <style>
             body {{ margin: 0; background: black; overflow: hidden; font-family: 'Courier New', monospace; }}
-            model-viewer {{ width: 100vw; height: 90vh; }} /* Taller for better centering */
+            model-viewer {{ width: 100vw; height: 90vh; }}
             
             /* CENTERED BUTTON STYLE */
             #center-btn {{
@@ -105,6 +112,7 @@ def render_interactive_phone(file_path):
                 transition: all 0.3s;
                 text-align: center;
                 backdrop-filter: blur(5px);
+                white-space: nowrap;
             }}
             #center-btn:hover {{
                 background: #00ff00;
@@ -115,7 +123,7 @@ def render_interactive_phone(file_path):
     </head>
     <body>
         
-        <a id="center-btn" href="#" target="_top">INITIALIZE SYSTEM</a>
+        <a id="center-btn" href="{full_link}" target="_top">INITIALIZE SYSTEM</a>
 
         <model-viewer 
             src="data:model/gltf-binary;base64,{b64_model}"
@@ -125,15 +133,8 @@ def render_interactive_phone(file_path):
             exposure="0.6"
             camera-orbit="0deg 90deg 105%" 
             interaction-prompt="none">
-            </model-viewer>
+        </model-viewer>
 
-        <script>
-            // Ensure button links correctly on Localhost and Cloud
-            const btn = document.getElementById("center-btn");
-            const currentUrl = new URL(window.top.location.href);
-            currentUrl.searchParams.set("launched", "true");
-            btn.href = currentUrl.toString();
-        </script>
     </body>
     </html>
     """
