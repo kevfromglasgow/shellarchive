@@ -3,8 +3,11 @@ import json
 import requests
 from io import BytesIO
 import time
+import base64
+import random
 
 # --- CONFIGURATION ---
+# UPDATE THIS TO YOUR ACTUAL DEPLOYED URL
 DEPLOY_URL = "https://shellarchive.streamlit.app"
 
 st.set_page_config(
@@ -25,11 +28,11 @@ st.markdown("""
         font-family: 'Share Tech Mono', monospace;
     }
     
-    /* REMOVE PADDING to maximize grid space */
+    /* REMOVE PADDING */
     .block-container { 
         padding-top: 1rem; 
         padding-bottom: 5rem; 
-        max-width: 95% !important; /* Force wider layout */
+        max-width: 95% !important; 
     }
     header, footer { visibility: hidden; }
 
@@ -77,14 +80,10 @@ st.markdown("""
     @keyframes blink { 50% { opacity: 0; } }
 
     /* --- SPREADSHEET GRID --- */
-    
-    /* The main container for the grid */
     .sheet-container {
         border: 3px double #00FF00;
         background: rgba(0, 10, 0, 0.3);
     }
-
-    /* Header Row - strictly defined widths using flex */
     .sheet-header {
         display: flex;
         align-items: center;
@@ -95,78 +94,44 @@ st.markdown("""
         text-transform: uppercase;
         letter-spacing: 1px;
     }
-
-    /* Data Rows - match flex behavior */
     .sheet-row {
         border-bottom: 1px solid #00FF00;
         min-height: 45px;
-        display: flex; /* Ensure row behaves as a flex container */
-        align-items: stretch; /* Stretch children to fill height */
+        display: flex;
+        align-items: stretch;
     }
     .sheet-row:hover {
         background: rgba(0, 255, 0, 0.08);
     }
 
-    /* Column Definitions - These align with Streamlit column ratios */
-    /* Total ratio roughly: 0.5 + 4 + 2 + 1.5 = 8 parts */
-    
     .cell {
         padding: 0 10px;
         display: flex;
         align-items: center;
         white-space: nowrap;
         overflow: hidden;
-        text-overflow: ellipsis; /* Prevents text cutoff */
+        text-overflow: ellipsis;
     }
     
-    /* Column A: ID (Small) */
-    .col-a { 
-        border-right: 1px solid #00FF00; 
-        color: #00AA00;
-        justify-content: center;
-        height: 100%; /* Fill vertical space */
-    }
-    
-    /* Column B: Title (Wide) */
-    .col-b { 
-        border-right: 1px solid #00FF00; 
-        height: 100%;
-        width: 100%; /* Fill the streamlit column */
-    }
-    
-    /* Column C: Artist (Medium) */
-    .col-c { 
-        border-right: 1px solid #00FF00; 
-        color: #00DD00;
-        height: 100%;
-    }
-    
-    /* Column D: Status (Small/Fixed) */
-    .col-d { 
-        justify-content: center;
-        font-weight: bold;
-        height: 100%;
-    }
+    .col-a { border-right: 1px solid #00FF00; color: #00AA00; justify-content: center; height: 100%; }
+    .col-b { border-right: 1px solid #00FF00; height: 100%; width: 100%; }
+    .col-c { border-right: 1px solid #00FF00; color: #00DD00; height: 100%; }
+    .col-d { justify-content: center; font-weight: bold; height: 100%; }
 
-    /* Button Styling - The Critical Fix */
-    .stButton {
-        width: 100%;
-        height: 100%;
-        margin: 0;
-    }
+    /* Button Styling */
+    .stButton { width: 100%; height: 100%; margin: 0; }
     .stButton > button {
         border: none;
         background: transparent;
         color: #00FF00;
         text-align: left;
-        padding: 8px 0; /* Add vertical padding for clickability */
+        padding: 8px 0;
         margin: 0;
         font-family: 'Share Tech Mono', monospace;
         text-transform: uppercase;
         width: 100%;
         height: 100%;
         line-height: 1.2;
-        /* Handle long text in button */
         white-space: nowrap; 
         overflow: hidden; 
         text-overflow: ellipsis; 
@@ -177,13 +142,11 @@ st.markdown("""
         text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
     }
     
-    /* Active Row Highlight */
     .active-row {
         background: rgba(0, 255, 0, 0.15) !important;
         border-left: 4px solid #00FF00;
     }
     
-    /* Player Container */
     .player-container {
         border: 2px solid #00FF00;
         padding: 10px;
@@ -191,7 +154,6 @@ st.markdown("""
         margin-bottom: 20px;
     }
     
-    /* Status Indicators */
     .status-ready { color: #00AA00; }
     .status-playing { 
         color: #00FF00; 
@@ -224,7 +186,65 @@ def fetch_audio_bytes(url):
 
 playlist = load_secure_playlist()
 
+# --- HELPER: CUSTOM HTML PLAYER WITH AUTO-NEXT ---
+def render_custom_player(audio_bytes, mime_type="audio/mp3"):
+    """
+    Renders an HTML5 audio player that:
+    1. Plays secure bytes (no URL leak)
+    2. Detects 'ended' event
+    3. Clicks a hidden link to ?next_song=true to trigger Python logic
+    """
+    b64_audio = base64.b64encode(audio_bytes).decode()
+    
+    # We create a hidden link that points to the DEPLOY_URL with a query param
+    # target="_top" ensures it reloads the main window, not the iframe
+    next_link = f"{DEPLOY_URL}/?next_song=true"
+    
+    html_code = f"""
+    <style>
+        audio {{ width: 100%; filter: invert(100%); margin-top: 5px; }}
+    </style>
+    
+    <audio id="custom-player" controls autoplay>
+        <source src="data:{mime_type};base64,{b64_audio}" type="{mime_type}">
+    </audio>
+    
+    <a id="auto-next-link" href="{next_link}" target="_top" style="display:none;">NEXT</a>
+
+    <script>
+        const player = document.getElementById('custom-player');
+        player.onended = function() {{
+            // When audio finishes, click the hidden link to reload page with next song
+            document.getElementById('auto-next-link').click();
+        }};
+    </script>
+    """
+    # Height must be enough to show the controls
+    st.components.v1.html(html_code, height=60)
+
+
 # --- STATE MANAGEMENT ---
+# 1. Handle "Next Song" Trigger (from auto-play)
+if "next_song" in st.query_params:
+    # Clear the param so we don't loop forever
+    st.query_params.clear()
+    
+    if "current_track" in st.session_state and playlist:
+        # Find current index
+        try:
+            current_idx = playlist.index(st.session_state.current_track)
+        except ValueError:
+            current_idx = 0
+            
+        # Determine Next Index
+        if st.session_state.get("shuffle_mode", False):
+            next_idx = random.randint(0, len(playlist) - 1)
+        else:
+            next_idx = (current_idx + 1) % len(playlist)
+            
+        st.session_state.current_track = playlist[next_idx]
+
+# 2. Check Launch State
 query_params = st.query_params
 url_launched = query_params.get("launched") == "true"
 if 'manual_launch' not in st.session_state:
@@ -234,6 +254,9 @@ is_active = url_launched or st.session_state.manual_launch
 
 if 'current_track' not in st.session_state:
     st.session_state.current_track = None
+
+if 'shuffle_mode' not in st.session_state:
+    st.session_state.shuffle_mode = False
 
 # ==========================================
 # VIEW 1: THE LANDING PAGE
@@ -255,45 +278,55 @@ else:
     # --- Terminal Header ---
     st.markdown(f"""
     <div class="terminal-header">
-        <div>SYSTEM: WORKBOOK_INTERFACE v2.1.9</div>
+        <div>SYSTEM: WORKBOOK_INTERFACE v3.0 [AUTO_SEQ]</div>
         <div>SESSION: {time.strftime('%Y-%m-%d %H:%M:%S')} UTC</div>
         <div>STATUS: <span style="color:#00FF00;">CONNECTED</span> <span class="blink">█</span></div>
     </div>
     """, unsafe_allow_html=True)
     
-    # --- Top Navigation & Player ---
-    col1, col2 = st.columns([1, 4])
+    # --- Top Navigation & Controls ---
+    col1, col2, col3 = st.columns([1.5, 1.5, 4])
     
     with col1:
-        if st.button("◄◄ CLOSE_FILE", key="close", help="Exit workbook"):
+        if st.button("◄◄ CLOSE_FILE", key="close"):
             st.session_state.manual_launch = False
             st.query_params.clear()
             st.rerun()
 
     with col2:
+        # SHUFFLE BUTTON
+        shuffle_icon = "∞ SHUFFLE: ON" if st.session_state.shuffle_mode else "→ SHUFFLE: OFF"
+        if st.button(shuffle_icon, key="shuffle"):
+            st.session_state.shuffle_mode = not st.session_state.shuffle_mode
+            # If turning ON, pick a random track immediately
+            if st.session_state.shuffle_mode and playlist:
+                st.session_state.current_track = random.choice(playlist)
+            st.rerun()
+
+    with col3:
         if st.session_state.current_track:
             track = st.session_state.current_track
             st.markdown(f"""
             <div class="player-container">
-                <div style="color:#00FF00; font-weight:bold; margin-bottom:5px;">
-                    ▶ NOW_PROCESSING: {track['title']} // {track['artist']}
+                <div style="color:#00FF00; font-weight:bold; margin-bottom:0px;">
+                    ▶ NOW_PROCESSING: {track['title']}
                 </div>
             </div>
             """, unsafe_allow_html=True)
             
+            # --- CUSTOM PLAYER LOGIC ---
             if track.get('url'):
                 audio_data = fetch_audio_bytes(track['url'])
                 if audio_data:
-                    st.audio(BytesIO(audio_data), format="audio/mp3", autoplay=True)
+                    # Use custom player instead of st.audio to handle auto-next
+                    render_custom_player(audio_data)
                 else:
                     st.error("⚠ ERR_CONNECTION_REFUSED")
 
-    # --- SPREADSHEET CONTAINER START ---
+    # --- SPREADSHEET ---
     st.markdown('<div class="sheet-container">', unsafe_allow_html=True)
 
-    # --- HEADER ROW (HTML) ---
-    # NOTE: We use CSS Grid ratios here to match the columns below
-    # Ratios: 1fr (ID) | 6fr (Title) | 3fr (Artist) | 2fr (Status)
+    # Header
     st.markdown("""
         <div class="sheet-header" style="display: flex;">
             <div class="cell col-a" style="flex: 1;">#ID</div>
@@ -303,48 +336,37 @@ else:
         </div>
     """, unsafe_allow_html=True)
 
-    # --- DATA ROWS (Loop) ---
+    # Rows
     for i, track in enumerate(playlist):
         is_playing = (st.session_state.current_track == track)
         row_class = "active-row" if is_playing else ""
-        status_text = "▶ PLAY" if is_playing else "READY"
+        status_text = "▶ PLAYING" if is_playing else "READY"
         status_class = "status-playing" if is_playing else "status-ready"
         
-        # Start Row Container
         st.markdown(f'<div class="sheet-row {row_class}">', unsafe_allow_html=True)
         
-        # Define Columns with EXACT same ratios as header: 1, 6, 3, 2
-        # We use a slight adjustment for Streamlit's internal padding
         c1, c2, c3, c4 = st.columns([1, 6, 3, 2])
         
-        # COL 1: ID
         with c1:
             st.markdown(f'<div class="cell col-a" style="height:100%; border:none;">{i+1:03d}</div>', unsafe_allow_html=True)
         
-        # COL 2: BUTTON (Title)
         with c2:
-            # The key must be unique for every button
             if st.button(f"⟩ {track.get('title', 'Unknown')}", key=f"btn_{i}"):
                 st.session_state.current_track = track
                 st.rerun()
         
-        # COL 3: ARTIST
         with c3:
             st.markdown(f'<div class="cell col-c" style="height:100%; border:none;">{track.get('artist', 'Unknown')}</div>', unsafe_allow_html=True)
 
-        # COL 4: STATUS
         with c4:
             st.markdown(f'<div class="cell col-d {status_class}" style="height:100%; border:none;">{status_text}</div>', unsafe_allow_html=True)
             
-        # End Row Container
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- SPREADSHEET CONTAINER END ---
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # --- Footer ---
     st.markdown(f"""
     <div class="terminal-header" style="margin-top:20px; font-size:0.8em; text-align:right;">
-        END_OF_WORKBOOK // TOTAL_ENTRIES: {len(playlist)}
+        MODE: {'SHUFFLE' if st.session_state.shuffle_mode else 'SEQUENTIAL'} // ENTRIES: {len(playlist)}
     </div>
     """, unsafe_allow_html=True)
