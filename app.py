@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components  # <--- THIS WAS MISSING
 import json
 import requests
 from io import BytesIO
@@ -12,8 +13,7 @@ DEPLOY_URL = "https://shellarchive.streamlit.app"
 
 # REPLACE THIS WITH YOUR OWN GLB FILE IF YOU HAVE ONE
 # For now, I'm using a placeholder "Sci-Fi Tablet" from a public CDN
-GLB_MODEL_URL = "https://github.com/kevfromglasgow/shellarchive/blob/main/iPhone%2017%20Pro.glb	" 
-# ^ Change to "my_tablet.glb" if you upload your own file
+GLB_MODEL_URL = "https://modelviewer.dev/shared-assets/models/Astronaut.glb" 
 
 st.set_page_config(
     page_title="SYSTEM_DATA // XLS",
@@ -201,7 +201,7 @@ def render_custom_player(audio_bytes, mime_type="audio/mp3"):
         }};
     </script>
     """
-    st.components.v1.html(html_code, height=40)
+    components.html(html_code, height=40)
 
 # --- STATE MANAGEMENT ---
 if "next_song" in st.query_params:
