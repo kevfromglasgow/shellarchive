@@ -21,22 +21,22 @@ st.markdown("""
         font-family: 'Space Mono', monospace;
     }
     
-    /* HIDE DEFAULT ELEMENTS */
+    /* HIDE DEFAULT STREAMLIT ELEMENTS */
     header {visibility: hidden;}
     footer {visibility: hidden;}
-    .block-container {padding-top: 2rem;}
+    .block-container {padding-top: 1rem;}
 
-    /* WIREFRAME CONTAINER STYLE */
+    /* WIREFRAME BOXES (The "Mesh" Look) */
     .wireframe-box {
         border: 1px solid rgba(255, 255, 255, 0.8);
         background: rgba(10, 10, 10, 0.8);
         padding: 25px;
         position: relative;
         margin-bottom: 20px;
-        box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
     }
 
-    /* GHOST BUTTONS */
+    /* CUSTOM BUTTONS */
     .stButton > button {
         width: 100%;
         border: 1px solid #ffffff;
@@ -45,29 +45,21 @@ st.markdown("""
         border-radius: 0px;
         font-family: 'Space Mono', monospace;
         text-transform: uppercase;
+        letter-spacing: 2px;
+        padding: 15px 0;
         transition: all 0.2s ease;
     }
     .stButton > button:hover {
         background-color: #ffffff;
         color: #000000;
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
         border-color: #ffffff;
-        box-shadow: 0 0 8px #ffffff;
     }
     
-    /* TEXT UTILS */
-    .h-glitch {
-        font-size: 2em;
-        font-weight: bold;
-        letter-spacing: -1px;
-        border-bottom: 2px solid white;
-        margin-bottom: 20px;
-        display: inline-block;
-    }
-    .small-meta {
-        font-size: 0.7em;
-        opacity: 0.6;
-        margin-bottom: 10px;
-        display: block;
+    /* ANIMATIONS */
+    @keyframes bounce {
+        0%, 100% { transform: scaleY(1); }
+        50% { transform: scaleY(0.4); }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -85,7 +77,7 @@ def render_interactive_phone(file_path):
         st.error(f"Error: Could not find '{file_path}' in the directory.")
         return
 
-    # User provided coordinates
+    # Specific coordinates for the Apple Logo on iPhone 17 Pro
     pos = "0.000029793852146581127m 0.01536270079792104m 0.004359653040944322m"
     norm = "2.7602458702456583e-7m 7.175783489991045e-8m 0.9999999999999594m"
 
@@ -96,28 +88,28 @@ def render_interactive_phone(file_path):
         <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
         <style>
             body {{ margin: 0; background-color: black; overflow: hidden; }}
-            model-viewer {{ width: 100vw; height: 80vh; }}
+            model-viewer {{ width: 100vw; height: 75vh; }}
             
             /* THE INVISIBLE TRIGGER OVER THE LOGO */
             .hotspot {{
                 display: block;
-                width: 30px; 
-                height: 30px;
+                width: 35px; 
+                height: 35px;
                 border-radius: 50%;
                 cursor: pointer;
-                background: transparent;
-                border: 1px dashed rgba(255, 255, 255, 0.5); /* Semi-visible for feedback */
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px dashed rgba(255, 255, 255, 0.3); 
                 animation: pulse 2s infinite;
             }}
             
             .hotspot:hover {{
                 border: 1px solid #fff;
-                background: rgba(255, 255, 255, 0.2);
+                background: rgba(255, 255, 255, 0.3);
             }}
 
             @keyframes pulse {{
-                0% {{ transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }}
-                70% {{ transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }}
+                0% {{ transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }}
+                70% {{ transform: scale(1.1); box-shadow: 0 0 0 15px rgba(255, 255, 255, 0); }}
                 100% {{ transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }}
             }}
         </style>
@@ -142,44 +134,78 @@ def render_interactive_phone(file_path):
 
         <script>
             function triggerLaunch() {{
-                // RELOAD PAGE WITH QUERY PARAM TO TRIGGER PYTHON STATE
-                const url = new URL(window.parent.location.href);
-                url.searchParams.set('launched', 'true');
-                window.parent.location.href = url.toString();
+                // Visual feedback
+                alert("ACCESS GRANTED... LOADING SYSTEM.");
+                
+                // Navigate to launched state
+                try {{
+                    const url = new URL(window.top.location.href);
+                    url.searchParams.set('launched', 'true');
+                    window.top.location.href = url.toString();
+                }} catch(e) {{
+                    // Fallback for strict iframes
+                    console.error(e);
+                }}
             }}
         </script>
     </body>
     </html>
     """
-    components.html(html_code, height=700)
+    components.html(html_code, height=650)
 
 
 # --- 3. APP LOGIC FLOW ---
 
-# Check Query Parameters to see if user "Clicked" the phone
+# Check Query Parameters & Session State
 query_params = st.query_params
-is_launched = query_params.get("launched") == "true"
+url_launched = query_params.get("launched") == "true"
+
+if 'manual_launch' not in st.session_state:
+    st.session_state.manual_launch = False
+
+# Determine if we are in the "Active" state
+is_active = url_launched or st.session_state.manual_launch
 
 # --- VIEW A: THE 3D LANDING PAGE ---
-if not is_launched:
+if not is_active:
     col1, col2, col3 = st.columns([1, 8, 1])
     with col2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-        st.markdown("<span class='h-glitch'>IPHONE 17 PRO</span>", unsafe_allow_html=True)
-        st.caption("SYSTEM LOCKED // TAP LOGO TO INITIALIZE")
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; font-size: 2.5em; font-weight: bold; border-bottom: 2px solid white; margin-bottom: 10px;'>IPHONE 17 PRO</div>", unsafe_allow_html=True)
+        st.caption("<center>INTERACTIVE MODEL // CLICK THE PULSING LOGO TO UNLOCK</center>", unsafe_allow_html=True)
         
         # RENDER THE PHONE
+        # Ensure 'iPhone 17 Pro.glb' is in the root directory
         render_interactive_phone("iPhone 17 Pro.glb")
+        
+        # Fallback Button (Crucial for Mobile/Strict Browsers)
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("ENTER SYSTEM [MANUAL OVERRIDE]"):
+            st.session_state.manual_launch = True
+            st.rerun()
 
-# --- VIEW B: THE MUSIC APP (MESH UI) ---
+# --- VIEW B: THE MUSIC APP (FUNCTIONAL) ---
 else:
-    # 1. HEADER
+    # 1. SETUP PLAYLIST & STATE
+    # Note: For audio to play, place actual .mp3 files in your folder and update filenames below.
+    # If files are missing, the UI will still work, but no sound will play.
+    playlist = [
+        {"title": "NEON HORIZONS", "artist": "SYSTEM_ID_909", "file": "song1.mp3", "length": "3:42"},
+        {"title": "MAINFRAME ACCESS", "artist": "BINARY_SOUL", "file": "song2.mp3", "length": "2:15"},
+        {"title": "VOLTAGE SPIKE", "artist": "NULL_POINTER", "file": "song3.mp3", "length": "4:01"},
+        {"title": "ZERO DAY", "artist": "KERNEL_PANIC", "file": "song4.mp3", "length": "3:10"},
+    ]
+
+    if 'track_index' not in st.session_state:
+        st.session_state.track_index = 0
+    
+    current_track = playlist[st.session_state.track_index]
+
+    # 2. HEADER
     top_c1, top_c2 = st.columns([1, 6])
     with top_c1:
-        # Reset URL to go back
         if st.button("← EXIT"):
+            st.session_state.manual_launch = False
             st.query_params.clear() # Clears ?launched=true
             st.rerun()
             
@@ -188,56 +214,72 @@ else:
 
     st.divider()
 
-    # 2. MAIN CONTENT GRID
+    # 3. MAIN CONTENT GRID
     col_left, col_right = st.columns([1, 1], gap="large")
 
-    # LEFT: Now Playing
+    # LEFT: Now Playing & Controls
     with col_left:
         st.markdown('<div class="wireframe-box">', unsafe_allow_html=True)
-        st.markdown("<span class='small-meta'>STATUS: PLAYING_</span>", unsafe_allow_html=True)
-        st.markdown("## NEON HORIZONS")
-        st.markdown("**ARTIST:** SYSTEM_ID_909")
+        st.caption("STATUS: PLAYING_")
+        st.markdown(f"## {current_track['title']}")
+        st.markdown(f"**ARTIST:** {current_track['artist']}")
         
         st.markdown("<br>", unsafe_allow_html=True)
         
+        # Try to play audio (will fail gracefully if file missing)
+        try:
+            st.audio(current_track['file'], format='audio/mp3')
+        except:
+            pass # Suppress error if files don't exist yet
+
         # CSS Visualizer
         st.markdown("""
-        <div style="display: flex; align-items: flex-end; justify-content: space-between; height: 60px; margin-bottom: 30px;">
-            <div style="width: 8px; background: #fff; height: 40%;"></div>
-            <div style="width: 8px; background: #fff; height: 80%;"></div>
-            <div style="width: 8px; background: #fff; height: 30%;"></div>
-            <div style="width: 8px; background: #fff; height: 100%;"></div>
-            <div style="width: 8px; background: #fff; height: 60%;"></div>
-            <div style="width: 8px; background: #fff; height: 20%;"></div>
-            <div style="width: 8px; background: #fff; height: 90%;"></div>
-            <div style="width: 8px; background: #fff; height: 50%;"></div>
+        <div style="display: flex; gap: 6px; height: 60px; align-items: flex-end; margin-bottom: 25px; margin-top: 10px;">
+            <div style="width: 8px; background: white; height: 40%; animation: bounce 1s infinite;"></div>
+            <div style="width: 8px; background: white; height: 80%; animation: bounce 1.2s infinite;"></div>
+            <div style="width: 8px; background: white; height: 100%; animation: bounce 0.8s infinite;"></div>
+            <div style="width: 8px; background: white; height: 60%; animation: bounce 1.5s infinite;"></div>
+            <div style="width: 8px; background: white; height: 30%; animation: bounce 1.1s infinite;"></div>
+            <div style="width: 8px; background: white; height: 70%; animation: bounce 0.9s infinite;"></div>
+            <div style="width: 8px; background: white; height: 50%; animation: bounce 1.3s infinite;"></div>
         </div>
         """, unsafe_allow_html=True)
 
         # Controls
         b1, b2, b3 = st.columns(3)
-        b1.button("<< PREV")
-        b2.button("|| PAUSE")
-        b3.button("NEXT >>")
+        
+        if b1.button("<< PREV"):
+            st.session_state.track_index = (st.session_state.track_index - 1) % len(playlist)
+            st.rerun()
+            
+        if b2.button("|| PAUSE"):
+            st.toast("PLAYBACK PAUSED")
+            
+        if b3.button("NEXT >>"):
+            st.session_state.track_index = (st.session_state.track_index + 1) % len(playlist)
+            st.rerun()
+            
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # RIGHT: Playlist
+    # RIGHT: Playlist Queue
     with col_right:
         st.markdown('<div class="wireframe-box">', unsafe_allow_html=True)
-        st.markdown("<span class='small-meta'>QUEUE_DATA</span>", unsafe_allow_html=True)
+        st.markdown("**QUEUE // DATA_STREAM**")
+        st.markdown("---")
         
-        playlist_data = [
-            {"id": "01", "title": "Mainframe Access", "time": "3:42"},
-            {"id": "02", "title": "Binary Soul", "time": "4:20"},
-            {"id": "03", "title": "Voltage_Spike", "time": "2:15"},
-            {"id": "04", "title": "Zero_Day_Exploit", "time": "3:33"},
-        ]
-        
-        for track in playlist_data:
+        for i, track in enumerate(playlist):
+            # Styling for active vs inactive tracks
+            if i == st.session_state.track_index:
+                style = "border: 1px solid #fff; padding: 10px; background: rgba(255,255,255,0.1); font-weight: bold;"
+                prefix = "▶ "
+            else:
+                style = "border-bottom: 1px solid #333; padding: 10px; opacity: 0.7;"
+                prefix = f"0{i+1}. "
+            
             st.markdown(f"""
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333;">
-                <span>{track['id']} // {track['title']}</span>
-                <span style="opacity: 0.5;">{track['time']}</span>
+            <div style="{style} display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span>{prefix}{track['title']}</span>
+                <span>{track['length']}</span>
             </div>
             """, unsafe_allow_html=True)
             
