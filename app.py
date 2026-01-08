@@ -400,26 +400,28 @@ else:
         status_class = "status-playing" if is_playing else "status-ready"
         status_text = "▶ PLAY" if is_playing else "READY"
         
-        # Create row container
-        st.markdown(f'<div class="sheet-row {row_class}">', unsafe_allow_html=True)
-        
-        c1, c2, c3, c4 = st.columns([0.8, 5, 2.2, 2])
-        
-        with c1:
-            st.markdown(f"<div class='col-a'>{i+1:03d}</div>", unsafe_allow_html=True)
-        
-        with c2:
+        # Use a single column for the entire row to avoid Streamlit column gaps
+        col = st.container()
+        with col:
+            # ID column
+            st.markdown(f"""
+            <div class="sheet-row {row_class}" style="margin: 0; padding: 0;">
+                <div class='col-a'>{i+1:03d}</div>
+                <div class='col-b' style='display: flex; align-items: center;'>
+            """, unsafe_allow_html=True)
+            
+            # Button in col-b
             if st.button(f"⟩ {track.get('title', 'Unknown')}", key=f"btn_{i}"):
                 st.session_state.current_track = track
                 st.rerun()
-        
-        with c3:
-            st.markdown(f"<div class='col-c'>{track.get('artist', 'Unknown')}</div>", unsafe_allow_html=True)
-
-        with c4:
-            st.markdown(f"<div class='col-d {status_class}'>{status_text}</div>", unsafe_allow_html=True)
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+            
+            # Artist and Status columns
+            st.markdown(f"""
+                </div>
+                <div class='col-c'>{track.get('artist', 'Unknown')}</div>
+                <div class='col-d {status_class}'>{status_text}</div>
+            </div>
+            """, unsafe_allow_html=True)
     
     # Close container
     st.markdown('</div>', unsafe_allow_html=True)
