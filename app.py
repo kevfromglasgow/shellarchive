@@ -26,6 +26,7 @@ st.markdown("""
     header, footer {visibility: hidden;}
     .block-container {padding-top: 1rem;}
 
+    /* WIREFRAME BOXES */
     .wireframe-box {
         border: 1px solid rgba(255, 255, 255, 0.8);
         background: rgba(10, 10, 10, 0.8);
@@ -35,10 +36,12 @@ st.markdown("""
         box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
     }
 
+    /* SCROLLBAR */
     ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: #000; }
     ::-webkit-scrollbar-thumb { background: #333; border: 1px solid #fff; }
 
+    /* ENTER BUTTON */
     .enter-btn button {
         border: 1px solid #00FF00 !important;
         color: #00FF00 !important;
@@ -49,6 +52,7 @@ st.markdown("""
         color: black !important;
     }
 
+    /* STANDARD BUTTONS */
     .stButton > button {
         width: 100%;
         border: 1px solid #ffffff;
@@ -73,7 +77,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. 3D VIEWER COMPONENT (FIXED NAVIGATION) ---
+# --- 2. 3D VIEWER WITH BIOMETRIC SCAN + AUTO-LINK ---
 def render_interactive_phone(file_path):
     try:
         with open(file_path, "rb") as f:
@@ -85,75 +89,116 @@ def render_interactive_phone(file_path):
     pos = "0.000029793852146581127m 0.01536270079792104m 0.004359653040944322m"
     norm = "2.7602458702456583e-7m 7.175783489991045e-8m 0.9999999999999594m"
 
-    # CRITICAL FIX: Use the ABSOLUTE URL so the link escapes the iframe
-    target_url = "https://shellarchive.streamlit.app/?launched=true"
-
     html_code = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
         <style>
-            body {{ margin: 0; background-color: black; overflow: hidden; }}
+            body {{ margin: 0; background: black; overflow: hidden; }}
             model-viewer {{ width: 100vw; height: 75vh; }}
             
+            /* HOTSPOT (Starts Scan) */
             .hotspot {{
-                display: block;
-                width: 40px; 
-                height: 40px;
-                border-radius: 50%;
-                cursor: pointer;
-                background: rgba(255, 255, 255, 0.05);
-                border: 2px solid rgba(255, 255, 255, 0.5); 
+                width: 35px; height: 35px; border-radius: 50%; cursor: pointer;
+                background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.6);
                 animation: pulse 2s infinite;
-                text-decoration: none;
             }}
-            .hotspot:hover {{ border-color: #00FF00; background: rgba(0, 255, 0, 0.2); }}
+            @keyframes pulse {{ 0% {{transform: scale(0.9);}} 50% {{transform: scale(1.1);}} 100% {{transform: scale(0.9);}} }}
 
-            @keyframes pulse {{
-                0% {{ transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }}
-                70% {{ transform: scale(1.1); box-shadow: 0 0 0 15px rgba(255, 255, 255, 0); }}
-                100% {{ transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }}
+            /* SCANNING UI */
+            #scan-line {{
+                position: absolute; top: 0; width: 100%; height: 4px;
+                background: #00ffcc; box-shadow: 0 0 20px #00ffcc;
+                animation: scan 2.5s linear forwards; display: none;
             }}
+            @keyframes scan {{ from {{top: 0;}} to {{top: 100%;}} }}
+
+            #biometric {{
+                position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+                width: 300px; border: 1px solid #00ffcc; padding: 6px; display: none;
+                font-family: monospace;
+            }}
+            #bar {{ width: 0%; height: 12px; background: #00ffcc; transition: width 0.1s linear; }}
+            #status {{ text-align: center; font-size: 12px; margin-top: 6px; color: #00ffcc; }}
         </style>
     </head>
     <body>
+        <div id="scan-line"></div>
+        <div id="biometric">
+            <div id="bar"></div>
+            <div id="status">SCANNING BIOMETRICS...</div>
+        </div>
+
         <model-viewer 
             src="data:model/gltf-binary;base64,{b64_model}"
             camera-controls auto-rotate shadow-intensity="2" exposure="0.6"
             camera-orbit="0deg 90deg 105%" interaction-prompt="none">
             
-            <a class="hotspot" slot="hotspot-trigger" 
-               data-position="{pos}" data-normal="{norm}"
-               href="{target_url}" target="_top">
-            </a>
-            
+            <button class="hotspot" slot="hotspot-trigger" 
+                data-position="{pos}" data-normal="{norm}"
+                onclick="startScan()">
+            </button>
         </model-viewer>
+
+        <script>
+        function startScan() {{
+            const scan = document.getElementById("scan-line");
+            const bio = document.getElementById("biometric");
+            const bar = document.getElementById("bar");
+            const status = document.getElementById("status");
+
+            // Show UI
+            scan.style.display = "block";
+            bio.style.display = "block";
+
+            let progress = 0;
+            const interval = setInterval(() => {{
+                progress += 2;
+                bar.style.width = progress + "%";
+
+                if (progress >= 100) {{
+                    clearInterval(interval);
+                    status.innerText = "IDENTITY VERIFIED";
+                    
+                    // --- NAVIGATION FIX ---
+                    setTimeout(() => {{
+                        // 1. Get current URL (works on localhost AND cloud)
+                        const currentUrl = new URL(window.top.location.href);
+                        
+                        // 2. Add the trigger param
+                        currentUrl.searchParams.set("launched", "true");
+                        
+                        // 3. Create a hidden link and click it
+                        // This bypasses the "blocked redirect" because it acts like a user click
+                        const link = document.createElement('a');
+                        link.href = currentUrl.toString();
+                        link.target = "_top"; // Breaks out of iframe
+                        document.body.appendChild(link);
+                        link.click(); 
+                    }}, 600);
+                }}
+            }}, 40); // Scan speed
+        }}
+        </script>
     </body>
     </html>
     """
     components.html(html_code, height=650)
 
-# --- 3. DATA & AUDIO LOADER (SECURE PROXY) ---
-
+# --- 3. DATA & PROXY LOADER ---
 @st.cache_data
 def load_secure_playlist():
-    """Loads metadata from secrets"""
     try:
         if "PLAYLIST_DATA" in st.secrets:
             return json.loads(st.secrets["PLAYLIST_DATA"])
         else:
-            return [{"title": "NO DATA", "artist": "CHECK SECRETS.TOML", "url": ""}]
-    except Exception as e:
-        st.error(f"Data Error: {e}")
+            return [{"title": "NO DATA", "artist": "CHECK SECRETS", "url": ""}]
+    except Exception:
         return []
 
 @st.cache_data(show_spinner=False)
 def fetch_audio_bytes(url):
-    """
-    Downloads audio from Google Drive to server memory.
-    Prevents public exposure of the URL.
-    """
     try:
         response = requests.get(url, stream=True)
         response.raise_for_status()
@@ -190,10 +235,9 @@ if not is_active:
 else:
     if 'track_index' not in st.session_state:
         st.session_state.track_index = 0
-    
     if st.session_state.track_index >= len(playlist):
         st.session_state.track_index = 0
-        
+    
     current = playlist[st.session_state.track_index]
 
     # Header
@@ -208,7 +252,6 @@ else:
 
     st.divider()
 
-    # Main Grid
     col_left, col_right = st.columns([1, 1], gap="large")
 
     # Player UI
@@ -217,21 +260,17 @@ else:
         st.caption("STATUS: PLAYING_")
         st.markdown(f"## {current.get('title', 'Unknown')}")
         st.markdown(f"**ARTIST:** {current.get('artist', 'Unknown')}")
-        
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- PROXY AUDIO PLAYER ---
+        # PROXY AUDIO
         if current.get('url'):
             audio_data = fetch_audio_bytes(current['url'])
-            
             if audio_data:
-                # Autoplay is ON to ensure music starts immediately
                 st.audio(BytesIO(audio_data), format="audio/mp3", autoplay=True)
             else:
-                st.error("CONNECTION_ERROR: UNABLE TO STREAM ASSET")
+                st.error("STREAM ERROR")
         else:
-            st.warning("AUDIO_SOURCE_OFFLINE")
-        # --------------------------
+            st.warning("OFFLINE")
 
         # Visualizer
         st.markdown("""
@@ -253,7 +292,6 @@ else:
         if b3.button("NEXT >>"):
             st.session_state.track_index = (st.session_state.track_index + 1) % len(playlist)
             st.rerun()
-            
         st.markdown('</div>', unsafe_allow_html=True)
 
     # Queue UI
@@ -264,19 +302,7 @@ else:
         
         for i, track in enumerate(playlist):
             active = i == st.session_state.track_index
-            
-            if active:
-                style = "border:1px solid #fff; background:rgba(255,255,255,0.1);"
-                prefix = "▶ "
-            else:
-                style = "border-bottom:1px solid #333; opacity:0.7;"
-                prefix = f"{i+1:03}. "
-
-            st.markdown(
-                f"<div style='{style}padding:10px;display:flex;justify-content:space-between;'>"
-                f"<span>{prefix}{track.get('title', 'Unknown')}</span>"
-                f"</div>",
-                unsafe_allow_html=True
-            )
-
+            style = "border:1px solid #fff; background:rgba(255,255,255,0.1);" if active else "border-bottom:1px solid #333; opacity:0.7;"
+            prefix = "▶ " if active else f"{i+1:03}. "
+            st.markdown(f"<div style='{style}padding:10px;display:flex;justify-content:space-between;'><span>{prefix}{track.get('title', 'Unknown')}</span></div>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
