@@ -197,27 +197,46 @@ if not is_active:
             body {{ margin: 0; background: black; overflow: hidden; font-family: 'Courier New', monospace; }}
             
             /* The Container */
-            #container {{ position: relative; width: 100vw; height: 100vh; }}
+            #container {{ 
+                position: relative; 
+                width: 100vw; 
+                height: 100vh; 
+                cursor: pointer;
+            }}
 
-            /* The 3D Viewer */
-            model-viewer {{ width: 100%; height: 100%; --poster-color: transparent; }}
+            /* The 3D Viewer - pointer events disabled so clicks pass through */
+            model-viewer {{ 
+                width: 100%; 
+                height: 100%; 
+                --poster-color: transparent;
+                pointer-events: none;
+            }}
             
             /* The Instructions */
             #overlay {{
-                position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
-                color: #00FF00; font-size: 1.5em; letter-spacing: 3px;
-                text-align: center; pointer-events: none; z-index: 5;
+                position: absolute; 
+                bottom: 80px; 
+                left: 50%; 
+                transform: translateX(-50%);
+                color: #00FF00; 
+                font-size: 1.5em; 
+                letter-spacing: 3px;
+                text-align: center; 
+                pointer-events: none; 
+                z-index: 5;
                 text-shadow: 0 0 10px #00FF00;
                 animation: pulse 2s infinite;
             }}
             @keyframes pulse {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.5; }} }}
 
-            /* THE INVISIBLE CLICK LAYER */
-            /* This sits ON TOP of the model. Clicking anywhere here triggers the link. */
+            /* THE CLICKABLE LAYER */
             #click-layer {{
-                position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-                z-index: 999; /* Must be higher than model-viewer */
-                display: block; /* Ensures it has dimension */
+                position: absolute; 
+                top: 0; 
+                left: 0; 
+                width: 100%; 
+                height: 100%;
+                z-index: 10;
                 cursor: pointer;
             }}
         </style>
@@ -226,8 +245,6 @@ if not is_active:
         <div id="container">
             <div id="overlay">[ CLICK_SYSTEM_TO_ACCESS ]</div>
             
-            <a id="click-layer" href="{target_link}" target="_top"></a>
-
             <model-viewer 
                 src="{GLB_MODEL_URL}"
                 auto-rotate 
@@ -237,6 +254,8 @@ if not is_active:
                 camera-orbit="0deg 75deg 105%" 
                 interaction-prompt="none">
             </model-viewer>
+
+            <a id="click-layer" href="{target_link}" target="_top"></a>
         </div>
     </body>
     </html>
